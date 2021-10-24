@@ -13,7 +13,7 @@ import retrofit2.http.Query
  * 描述: Api接口
  */
 interface ApiService {
-    //地区api
+    //全球地区api
     @GET("2.5/place?${MyWeatherApplication.TOKEN}&lang=zh_CN")
     fun searchPlaces(@Query("query") query:String):Call<PlaceResponse>
 }

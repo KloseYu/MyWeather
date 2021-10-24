@@ -1,4 +1,4 @@
-package com.myweather.android.logic.model
+package com.myweather.android.logic.network
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
