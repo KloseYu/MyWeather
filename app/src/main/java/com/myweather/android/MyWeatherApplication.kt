@@ -10,8 +10,6 @@ import android.content.Context
  * 日期: 2021/10/24
  * 描述: Application
  */
-
-
 class MyWeatherApplication : Application(){
     companion object{
         const val TOKEN ="auv03EiB3Zt9RZcn"
