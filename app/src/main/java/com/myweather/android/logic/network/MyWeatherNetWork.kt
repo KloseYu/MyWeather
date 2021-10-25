@@ -26,7 +26,7 @@ object MyWeatherNetWork {
     suspend fun searchPlaces(query:String) = apiService.searchPlaces(query).await()
 
     /**
-     * suspend,协程 这里对所有Call<T>定义了一个扩展方法await,里面对数据进行了处理和封装
+     * suspend fun 挂起函数 这里对所有Call<T>定义了一个扩展方法await,里面对数据进行了处理和封装
      * 使用协程的写法来简化Retrofit回调
      */
     private suspend fun <T> Call<T>.await():T {
