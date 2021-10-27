@@ -14,6 +14,7 @@ import androidx.core.view.ViewCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.Observer
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.myweather.android.R
 import com.myweather.android.logic.model.Weather
 import com.myweather.android.logic.model.getSky
@@ -21,6 +22,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class WeatherActivity : AppCompatActivity() {
+
     val viewModel by lazy { ViewModelProvider(this).get(WeatherViewModel::class.java) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,6 +43,38 @@ class WeatherActivity : AppCompatActivity() {
             viewModel.placeName = intent.getStringExtra("place_name") ?: ""
         }
 
+         // 折叠菜单
+        val navBtn: Button = findViewById(R.id.navBtn)
+        val drawerLayout:DrawerLayout =findViewById(R.id.drawerLayout)
+        navBtn.setOnClickListener {
+            drawerLayout.openDrawer(GravityCompat.START)
+        }
+
+        drawerLayout.addDrawerListener(object : DrawerLayout.DrawerListener {
+            override fun onDrawerStateChanged(newState: Int) {
+
+            }
+
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {
+
+            }
+
+            override fun onDrawerOpened(drawerView: View) {
+
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                // 关闭菜单时隐藏输入法
+                val manager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                manager.hideSoftInputFromWindow(
+                    drawerView.windowToken,
+                    InputMethodManager.HIDE_NOT_ALWAYS
+                )
+            }
+
+        })
+
+        val swipeRefresh: SwipeRefreshLayout =findViewById(R.id.swipeRefresh)
         viewModel.weatherLiveData.observe(this, Observer {
             val weather = it.getOrNull()
             if (weather != null) {
@@ -49,8 +83,24 @@ class WeatherActivity : AppCompatActivity() {
                 Toast.makeText(this, "无法成功获取到天气信息!", Toast.LENGTH_SHORT).show()
                 it.exceptionOrNull()?.printStackTrace()
             }
+            // 设置刷新状态为false
+            swipeRefresh.isRefreshing = false
         })
-        viewModel.refreshWeather(viewModel.locationLng,viewModel.locationLat)
+        //设置刷新的颜色
+        swipeRefresh.setColorSchemeResources(R.color.colorPrimary)
+        // 进入时自动刷新一遍
+        refreshWeather()
+        // 下拉时触发刷新事件
+        swipeRefresh.setOnRefreshListener {
+            refreshWeather()
+        }
+    }
+
+
+    fun refreshWeather() {
+        val swipeRefresh: SwipeRefreshLayout =findViewById(R.id.swipeRefresh)
+        viewModel.refreshWeather(viewModel.locationLng, viewModel.locationLat)
+        swipeRefresh.isRefreshing = true
     }
 
     private fun showWeatherInfo(weather: Weather) {

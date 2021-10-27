@@ -9,7 +9,7 @@
     <ImageView
         android:id="@+id/bgImgView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="1020dp"
         android:layout_alignParentBottom="true"
         android:src="@drawable/bg_place" />
 
