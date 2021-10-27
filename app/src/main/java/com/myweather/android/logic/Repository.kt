@@ -4,7 +4,11 @@ import androidx.lifecycle.liveData
 import com.myweather.android.logic.model.PlaceResponse
 import com.myweather.android.logic.network.MyWeatherNetWork
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import java.lang.Exception
 import java.lang.RuntimeException
+import kotlin.coroutines.CoroutineContext
 
 /**
  * 文件名: Repository

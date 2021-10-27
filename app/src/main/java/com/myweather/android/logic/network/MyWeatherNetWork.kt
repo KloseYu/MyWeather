@@ -16,8 +16,7 @@ import kotlin.coroutines.suspendCoroutine
  * 描述: 网络数据源访问入口
  */
 object MyWeatherNetWork {
-
-    private val apiService = ServiceCreator.create<ApiService>()
+    private val apiService = ServiceCreator.create(ApiService::class.java)
 
 
     /**
@@ -26,28 +25,29 @@ object MyWeatherNetWork {
     suspend fun searchPlaces(query:String) = apiService.searchPlaces(query).await()
 
     /**
-     * suspend fun 挂起函数 这里对所有Call<T>定义了一个扩展方法await,里面对数据进行了处理和封装
+     * suspend fun挂起函数 这里对所有Call<T>定义了一个扩展方法await,里面对数据进行了处理和封装
      * 使用协程的写法来简化Retrofit回调
      */
-    private suspend fun <T> Call<T>.await():T {
+    private suspend fun <T> Call<T>.await():T{
         return suspendCoroutine {
-            enqueue(object : Callback<T> {
-                override fun onResponse(call: Call<T>, response: Response<T>) {
-                    val body = response.body()
-                    if (body != null) {
-                        // 请求成功，继续
-                        it.resume(body)
-                    } else {
-                        // 请求成功但无结果，继续
-                        it.resumeWithException(RuntimeException("response body is null"))
-                    }
+                 enqueue(object :Callback<T>{
+            override fun onResponse(call: Call<T>, response: Response<T>) {
+                val body = response.body()
+                if(body != null){
+                    // 请求成功，继续
+                    it.resume(body)
+                }else{
+                    // 请求成功但无结果，继续
+                    it.resumeWithException(RuntimeException("response body is null"))
                 }
+            }
 
-                override fun onFailure(call: Call<T>, t: Throwable) {
-                    // 请求失败，返回错误信息
-                    it.resumeWithException(t)
-                }
-            })
+            override fun onFailure(call: Call<T>, t: Throwable) {
+                // 请求失败，返回错误信息
+                it.resumeWithException(t)
+            }
+        })
         }
+
     }
 }

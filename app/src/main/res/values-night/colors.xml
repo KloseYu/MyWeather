@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#00574B</color>
+    <color name="colorPrimary">#165D95</color>
     <color name="colorAccent">#711033</color>
+    <color name="search_bg">#424242</color>
 </resources>

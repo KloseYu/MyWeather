@@ -4,6 +4,7 @@ import com.myweather.android.MyWeatherApplication
 import com.myweather.android.logic.model.PlaceResponse
 import retrofit2.Call
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 /**
@@ -14,6 +15,6 @@ import retrofit2.http.Query
  */
 interface ApiService {
     //全球地区api
-    @GET("2.5/place?${MyWeatherApplication.TOKEN}&lang=zh_CN")
+    @GET("v2/place?${MyWeatherApplication.TOKEN}&lang=zh_CN")
     fun searchPlaces(@Query("query") query:String):Call<PlaceResponse>
 }
