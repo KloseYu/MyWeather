@@ -9,7 +9,7 @@ import com.myweather.android.logic.model.PlaceResponse
 /**
  * 文件名: PlaceViewModel
  * 作者: KloseYu
- * 日期 2021/10/25
+ * 日期: 2021/10/25
  * 描述: placeViewModel层
  */
 class PlaceViewModel : ViewModel() {

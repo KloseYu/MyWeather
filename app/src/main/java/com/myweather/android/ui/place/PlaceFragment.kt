@@ -20,7 +20,7 @@ import com.myweather.android.R
 /**
  * 文件名: PlaceFragment
  * 作者: KloseYu
- * 日期 2021/10/25
+ * 日期: 2021/10/25
  * 描述: PlaceFragment
  */
 class PlaceFragment : Fragment() {
