@@ -10,7 +10,7 @@ import com.myweather.android.logic.model.PlaceResponse
  * 文件名: PlaceViewModel
  * 作者: KloseYu
  * 日期: 2021/10/25
- * 描述: placeViewModel层
+ * 描述: place的ViewModel层
  */
 class PlaceViewModel : ViewModel() {
     private val searchLiveData:MutableLiveData<String> = MutableLiveData<String>()
@@ -23,5 +23,17 @@ class PlaceViewModel : ViewModel() {
 
     fun searchPlaces(query:String){
         searchLiveData.value =query
+    }
+
+    fun savePlace(place: PlaceResponse.Place) {
+        Repository.savePlace(place)
+    }
+
+    fun getSavedPlace(): PlaceResponse.Place {
+        return Repository.getSavedPlace()
+    }
+
+    fun isPlaceSaved(): Boolean {
+        return Repository.isPlaceSaved()
     }
 }

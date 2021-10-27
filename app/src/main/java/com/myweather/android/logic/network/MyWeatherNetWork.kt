@@ -25,6 +25,16 @@ object MyWeatherNetWork {
     suspend fun searchPlaces(query:String) = apiService.searchPlaces(query).await()
 
     /**
+     * 搜索实时天气的API
+     */
+    suspend fun getRealtimeWeather(lng:String,lat:String) = apiService.getRealWeather(lng, lat).await()
+
+    /**
+     * 搜索最近天气的API
+     */
+    suspend fun getDailyWeather(lng:String,lat:String) = apiService.getDailyWeather(lng,lat).await()
+
+    /**
      * suspend fun挂起函数 这里对所有Call<T>定义了一个扩展方法await,里面对数据进行了处理和封装
      * 使用协程的写法来简化Retrofit回调
      */
