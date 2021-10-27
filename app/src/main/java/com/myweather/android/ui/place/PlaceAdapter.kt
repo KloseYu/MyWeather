@@ -8,6 +8,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.myweather.android.R
 import com.myweather.android.logic.model.PlaceResponse
 
+/**
+ * 文件名: PlaceAdapter
+ * 作者: KloseYu
+ * 日期 2021/10/25
+ * 描述: place适配器
+ */
 class PlaceAdapter(private val fragment: PlaceFragment,private val placeList: List<PlaceResponse.Place>) :
     RecyclerView.Adapter<PlaceAdapter.ViewHolder>(){
 
