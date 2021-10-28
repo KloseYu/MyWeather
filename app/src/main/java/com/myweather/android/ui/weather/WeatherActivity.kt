@@ -115,9 +115,12 @@ class WeatherActivity : AppCompatActivity() {
         currentTemp.text = currentTempText
         val currentSky:TextView = findViewById(R.id.currentSky)
         currentSky.text = getSky(realtime.skycon).info
-        val currentPM25Text = "空气指数 ${realtime.airQuality.aqi.chn.toInt()}"
+        val currentAQIText = "空气指数 ${realtime.airQuality.aqi.chn.toInt()}"
         val currentAQI:TextView = findViewById(R.id.currentAQI)
-        currentAQI.text = currentPM25Text
+        currentAQI.text = currentAQIText
+        val currentAQIDirection:TextView = findViewById(R.id.currentAQIDirection)
+        val currentAQIDirectionText = "空气质量 ${realtime.airQuality.description.chn}"
+        currentAQIDirection.text = currentAQIDirectionText
         //设置背景
         val nowLayout: RelativeLayout = findViewById(R.id.nowLayout)
         nowLayout.setBackgroundResource(getSky(realtime.skycon).bg)

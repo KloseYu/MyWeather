@@ -17,12 +17,18 @@ data class RealtimeResponse (
     val temperature:Float,
     val skycon:String,
     @SerializedName("air_quality") val airQuality:AirQuality,
-){ data class AirQuality(
-        val aqi:AQI
+){
+    data class AirQuality(
+        val aqi:AQI,
+        val description: Description,
         )
+
     { data class AQI(
-            val chn:Float
+            val chn:Float,
             )
+        data class Description(
+            val chn:String,
+        )
     }
        }
     }
