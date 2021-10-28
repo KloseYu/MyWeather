@@ -1,6 +1,6 @@
 package com.myweather.android.logic.network
 
-import com.myweather.android.MyWeatherApplication
+import com.myweather.android.MyWeatherApplication.Companion.TOKEN
 import com.myweather.android.logic.model.DailyResponse
 import com.myweather.android.logic.model.PlaceResponse
 import com.myweather.android.logic.model.RealtimeResponse
@@ -17,14 +17,14 @@ import retrofit2.http.Query
  */
 interface ApiService {
     //全球地区api
-    @GET("v2/place?${MyWeatherApplication.TOKEN}&lang=zh_CN")
+    @GET("v2/place?${TOKEN}&lang=zh_CN")
     fun searchPlaces(@Query("query") query:String):Call<PlaceResponse>
 
     //实时天气api
-    @GET("v2.5/${MyWeatherApplication.TOKEN}/{lng},{lat}/realtime.json")
+    @GET("v2.5/${TOKEN}/{lng},{lat}/realtime.json")
     fun getRealWeather(@Path("lng") lng:String,@Path("lat") lat:String):Call<RealtimeResponse>
 
     //最近天气api
-    @GET("v2.5/${MyWeatherApplication.TOKEN}/{lng},{lat}/daily.json")
+    @GET("v2.5/${TOKEN}/{lng},{lat}/daily.json")
     fun getDailyWeather(@Path("lng") lng:String,@Path("lat") lat:String):Call<DailyResponse>
 }

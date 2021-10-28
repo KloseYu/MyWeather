@@ -112,7 +112,7 @@ class WeatherActivity : AppCompatActivity() {
         val daily = weather.daily
 
         // 填充now.xml的布局内容
-        val currentWeatherText = "${realtime.temperature.toInt()} ℃/${(realtime.temperature*1.8+32).toInt()} ℉"
+        val currentWeatherText = "${realtime.temperature.toInt()} ℃ / ${(realtime.temperature*1.8+32).toInt()} ℉"
         val currentWeather:TextView = findViewById(R.id.currentWeather)
         currentWeather.text = currentWeatherText
         val currentWindDirection:TextView =findViewById(R.id.currentWindDirection)
