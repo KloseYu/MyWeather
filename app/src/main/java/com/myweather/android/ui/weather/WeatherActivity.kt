@@ -18,6 +18,8 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.myweather.android.R
 import com.myweather.android.logic.model.Weather
 import com.myweather.android.logic.model.getSky
+import com.myweather.android.logic.model.getWindOri
+import com.myweather.android.logic.model.getWindSpeed
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -110,9 +112,13 @@ class WeatherActivity : AppCompatActivity() {
         val daily = weather.daily
 
         // 填充now.xml的布局内容
-        val currentTempText = "${realtime.temperature.toInt()} ℃"
-        val currentTemp:TextView = findViewById(R.id.currentTemp)
-        currentTemp.text = currentTempText
+        val currentWeatherText = "${realtime.temperature.toInt()} ℃ | ${(realtime.temperature*1.8+32).toInt()} ℉"
+        val currentWeather:TextView = findViewById(R.id.currentWeather)
+        currentWeather.text = currentWeatherText
+        val currentWindDirection:TextView =findViewById(R.id.currentWindDirection)
+        currentWindDirection.text = getWindOri(realtime.wind.description).ori
+        val currentWindSpeed:TextView = findViewById(R.id.currentWindSpeed)
+        currentWindSpeed.text = getWindSpeed(realtime.wind.speed).speed
         val currentSky:TextView = findViewById(R.id.currentSky)
         currentSky.text = getSky(realtime.skycon).info
         val currentAQIText = "空气指数 ${realtime.airQuality.aqi.chn.toInt()}"

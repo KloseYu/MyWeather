@@ -20,7 +20,7 @@
             android:layout_marginEnd="15dp"
             android:layout_marginTop="20dp"
             android:layout_marginBottom="20dp"
-            android:text="预报"
+            android:text="最近五天天气"
             android:textColor="?android:attr/textColorPrimary"
             android:textSize="20sp" />
 

@@ -15,7 +15,7 @@ data class PlaceResponse(
     data class Place(
         val name:String,
         val location: Location,
-        @SerializedName("formatted_address") val address:String
+        @SerializedName("formatted_address") val address:String,
     ){
         data class Location(
             val lng:String,
