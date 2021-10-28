@@ -3,7 +3,7 @@ plugins {
     id 'kotlin-android'
 
 }
-apply plugin: 'kotlin-android'
+
 
 android {
     compileSdk 31
