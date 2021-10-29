@@ -20,7 +20,7 @@ object MyWeatherNetWork {
 
 
     /**
-     * 搜索全球地区的API接口，调用了自己定义的await函数来简化写法。
+     * 搜索全球地区的API接口，调用了自己定义的await扩展方法来简化写法。
      */
     suspend fun searchPlaces(query:String) = apiService.searchPlaces(query).await()
 
