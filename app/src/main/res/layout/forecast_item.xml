@@ -12,12 +12,12 @@
         android:layout_weight="4" />
 
     <ImageView
-        android:id="@+id/skyIcon"
+        android:id="@+id/skyDailyIcon"
         android:layout_width="20dp"
         android:layout_height="20dp" />
 
     <TextView
-        android:id="@+id/skyInfo"
+        android:id="@+id/skyDailyInfo"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
@@ -25,7 +25,7 @@
         android:gravity="center" />
 
     <TextView
-        android:id="@+id/temperatureInfo"
+        android:id="@+id/temperatureDailyInfo"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
