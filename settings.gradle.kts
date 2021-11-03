@@ -7,4 +7,5 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "MyWeather"
-include ':app'
+rootProject.buildFileName ="build.gradle.kts"
+include (":app")
