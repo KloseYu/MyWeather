@@ -7,5 +7,6 @@ package com.myweather.android.logic.model
  */
 data class Weather(
     val realtime: RealtimeResponse.Result.Realtime,
-    val daily: DailyResponse.Daily
+    val hourly: HourlyResponse.Hourly,
+    val daily: DailyResponse.Daily,
 )

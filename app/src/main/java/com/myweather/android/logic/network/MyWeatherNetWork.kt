@@ -30,6 +30,11 @@ object MyWeatherNetWork {
     suspend fun getRealtimeWeather(lng:String,lat:String) = apiService.getRealWeather(lng, lat).await()
 
     /**
+     * 搜索24小时天气的API
+     */
+    suspend fun getHourlyWeather(lng:String,lat:String) = apiService.getHourlyWeather(lng, lat).await()
+
+    /**
      * 搜索最近天气的API
      */
     suspend fun getDailyWeather(lng:String,lat:String) = apiService.getDailyWeather(lng,lat).await()
