@@ -2,6 +2,7 @@ package com.myweather.android.logic.network
 
 import com.myweather.android.MyWeatherApplication.Companion.TOKEN
 import com.myweather.android.logic.model.DailyResponse
+import com.myweather.android.logic.model.HourlyResponse
 import com.myweather.android.logic.model.PlaceResponse
 import com.myweather.android.logic.model.RealtimeResponse
 import retrofit2.Call
@@ -23,6 +24,12 @@ interface ApiService {
     //实时天气api
     @GET("v2.5/${TOKEN}/{lng},{lat}/realtime.json")
     fun getRealWeather(@Path("lng") lng:String,@Path("lat") lat:String):Call<RealtimeResponse>
+
+
+    //24小时天气api
+    @GET("v2.5/${TOKEN}/{lng},{lat}/hourly.json?hourlysteps=24")
+    fun getHourlyWeather(@Path("lng") lng:String,@Path("lat") lat:String):Call<HourlyResponse>
+
 
     //最近天气api
     @GET("v2.5/${TOKEN}/{lng},{lat}/daily.json")

@@ -7,6 +7,8 @@
         <entry key="..\:/android/MyWeather/app/src/main/res/layout/activity_weather.xml" value="0.28396739130434784" />
         <entry key="..\:/android/MyWeather/app/src/main/res/layout/forecast.xml" value="0.28396739130434784" />
         <entry key="..\:/android/MyWeather/app/src/main/res/layout/forecast_item.xml" value="0.153125" />
+        <entry key="..\:/android/MyWeather/app/src/main/res/layout/hourly24.xml" value="0.3203125" />
+        <entry key="..\:/android/MyWeather/app/src/main/res/layout/hourly24_item.xml" value="0.3203125" />
         <entry key="..\:/android/MyWeather/app/src/main/res/layout/item_forecast.xml" value="0.28396739130434784" />
         <entry key="..\:/android/MyWeather/app/src/main/res/layout/life_index.xml" value="0.28396739130434784" />
         <entry key="..\:/android/MyWeather/app/src/main/res/layout/now.xml" value="0.15677083333333333" />

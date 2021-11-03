@@ -5,31 +5,32 @@
     android:layout_margin="15dp">
 
     <TextView
-        android:id="@+id/dateInfo"
+        android:id="@+id/timeInfo"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
-        android:layout_weight="4" />
+        android:layout_weight="4"/>
 
     <ImageView
-        android:id="@+id/skyDailyIcon"
+        android:id="@+id/skyHourlyIcon"
         android:layout_width="20dp"
         android:layout_height="20dp" />
 
     <TextView
-        android:id="@+id/skyDailyInfo"
+        android:id="@+id/skyHourlyInfo"
         android:layout_width="0dp"
+        android:layout_weight="3"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
-        android:layout_weight="3"
-        android:gravity="center" />
+        android:gravity="center"/>
 
     <TextView
-        android:id="@+id/temperatureDailyInfo"
+        android:id="@+id/temperatureHourlyInfo"
         android:layout_width="0dp"
+        android:layout_weight="3"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
-        android:layout_weight="3"
-        android:gravity="end" />
+        android:gravity="end"/>
+
 
 </LinearLayout>

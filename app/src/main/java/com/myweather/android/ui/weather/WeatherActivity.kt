@@ -21,6 +21,8 @@ import com.myweather.android.logic.model.getSky
 import com.myweather.android.logic.model.getWindOri
 import com.myweather.android.logic.model.getWindSpeed
 import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.*
 
 class WeatherActivity : AppCompatActivity() {
@@ -109,6 +111,7 @@ class WeatherActivity : AppCompatActivity() {
         val placeName:TextView = findViewById(R.id.placeName)
         placeName.text = viewModel.placeName
         val realtime = weather.realtime
+        val hourly =weather.hourly
         val daily = weather.daily
 
         // 填充now.xml的布局内容
@@ -131,6 +134,28 @@ class WeatherActivity : AppCompatActivity() {
         val nowLayout: RelativeLayout = findViewById(R.id.nowLayout)
         nowLayout.setBackgroundResource(getSky(realtime.skycon).bg)
 
+        //填充hourly24.xml的布局内容
+        val hourly24Layout:LinearLayout = findViewById(R.id.hourly24Layout)
+        hourly24Layout.removeAllViews()
+        val times = hourly.skycon.size
+        for (i in 0 until times){
+            val skycon = hourly.skycon[i]
+            val temperature = hourly.temperature[i]
+            val view = LayoutInflater.from(this).inflate(R.layout.hourly24_item,hourly24Layout,false)
+            val timeInfo = view.findViewById(R.id.timeInfo) as TextView
+            val skyIcon = view.findViewById(R.id.skyHourlyIcon) as ImageView
+            val skyInfo = view.findViewById(R.id.skyHourlyInfo) as TextView
+            val temperatureInfo = view.findViewById(R.id.temperatureHourlyInfo) as TextView
+            timeInfo.text = "${skycon.datetime.substring(0,10)}  ${skycon.datetime.substring(11,16)}"
+            val sky= getSky(skycon.value)
+            skyIcon.setImageResource(sky.icon)
+            skyInfo.text = sky.info
+            val tempText = "${temperature.value.toInt()}℃/${(temperature.value*1.8+32).toInt()} ℉"
+            temperatureInfo.text = tempText
+            hourly24Layout.addView(view)
+        }
+
+
         // 填充forecast.xml的布局内容
         val forecastLayout:LinearLayout = findViewById(R.id.forecastLayout)
         forecastLayout.removeAllViews()
@@ -141,9 +166,9 @@ class WeatherActivity : AppCompatActivity() {
             val temperature = daily.temperature[i]
             val view = LayoutInflater.from(this).inflate(R.layout.forecast_item, forecastLayout,false)
             val dateInfo = view.findViewById(R.id.dateInfo) as TextView
-            val skyIcon = view.findViewById(R.id.skyIcon) as ImageView
-            val skyInfo = view.findViewById(R.id.skyInfo) as TextView
-            val temperatureInfo = view.findViewById(R.id.temperatureInfo) as TextView
+            val skyIcon = view.findViewById(R.id.skyDailyIcon) as ImageView
+            val skyInfo = view.findViewById(R.id.skyDailyInfo) as TextView
+            val temperatureInfo = view.findViewById(R.id.temperatureDailyInfo) as TextView
             val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             dateInfo.text = simpleDateFormat.format(skycon.date)
             val sky = getSky(skycon.value)
