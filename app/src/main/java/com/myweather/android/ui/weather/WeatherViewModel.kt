@@ -7,7 +7,7 @@ import com.myweather.android.logic.Repository
 import com.myweather.android.logic.model.PlaceResponse
 
 /**
- * 文件名:  WeatherActivity
+ * 文件名:  WeatherViewModel
  * 作者: KloseYu
  * 日期: 2021/10/27
  * 描述:  Weather的ViewModel层
