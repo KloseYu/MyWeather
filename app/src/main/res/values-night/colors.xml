@@ -3,4 +3,5 @@
     <color name="colorPrimary">#165D95</color>
     <color name="colorAccent">#711033</color>
     <color name="search_bg">#424242</color>
+    <color name="life_photo">#ffffff</color>
 </resources>
