@@ -1,2 +1,2 @@
 # MyWeather
-根据郭婶@guolin大佬的第一行代码的Kotlin版天气教程及参考些他人的代码写出来的天气APP,由于还在学习中，如果有提供建议和方案请多指教</br>According to the Kotlin version of the weather tutorial of the first line of code of the Guolin and the weather APP written with reference to some other people's code, because it is still learning, if there are suggestions and plans, please advise
+根据郭婶@guolin大佬的《第一行代码的Kotlin版》天气APP教程及参考些他人的代码写出来的天气APP,由于还在学习中，如果有提供建议和方案请多指教</br>According to guolin's "Kotlin version of the first line of code" Caiyun Weather APP tutorial and refer to some other people's code to write the weather APP, because it is still learning, if you have suggestions and solutions, please advise
