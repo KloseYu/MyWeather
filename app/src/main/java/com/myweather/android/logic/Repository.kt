@@ -12,12 +12,13 @@ import java.lang.Exception
 import java.lang.RuntimeException
 import kotlin.coroutines.CoroutineContext
 
-/**
+/*
  * 文件名: Repository
  * 作者: KloseYu
  * 日期: 2021/10/24
  * 描述: 仓库层的统一封装入口
  */
+
 object Repository {
 
     // liveData是ktx库提供的一个功能，可以自动构建并返回LiveData对象
