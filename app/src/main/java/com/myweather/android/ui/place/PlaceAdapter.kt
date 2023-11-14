@@ -19,12 +19,13 @@ private val WeatherActivity.drawerLayout: DrawerLayout
         return findViewById(R.id.drawerLayout)
     }
 
-/**
+/*
  * 文件名: PlaceAdapter
  * 作者: KloseYu
  * 日期: 2021/10/25
  * 描述: place适配器
  */
+
 class PlaceAdapter(private val fragment: PlaceFragment,private val placeList: List<PlaceResponse.Place>) :
     RecyclerView.Adapter<PlaceAdapter.ViewHolder>() {
 
