@@ -3,12 +3,13 @@ package com.myweather.android.logic.model
 import com.google.gson.annotations.SerializedName
 import java.util.*
 
-/**
+/*
  * 文件名: DailyResponse
  * 作者: KloseYu
  * 日期: 2021/10/27
  * 描述: 最近天气模块
  */
+
 data class DailyResponse(val status: String, val result: Result) {
     data class Result(val daily: Daily)
 
