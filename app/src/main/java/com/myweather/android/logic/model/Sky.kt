@@ -2,12 +2,13 @@ package com.myweather.android.logic.model
 
 import com.myweather.android.R
 
-/**
+/*
  * 文件名: Sky
  * 作者: KloseYu
  * 日期: 2021/10/27
  * 描述: 天气转换模块
  */
+
 class Sky (val info: String, val icon: Int, val bg: Int)
 
 private val sky = mapOf(
