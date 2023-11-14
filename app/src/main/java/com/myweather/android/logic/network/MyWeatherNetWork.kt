@@ -9,12 +9,13 @@ import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 
-/**
+/*
  * 文件名: MyWeatherNetWork
  * 作者: KloseYu
  * 日期: 2021/10/24
  * 描述: 网络数据源访问入口
  */
+
 object MyWeatherNetWork {
     private val apiService = ServiceCreator.create(ApiService::class.java)
 
