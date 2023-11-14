@@ -20,12 +20,13 @@ import com.myweather.android.R
 import com.myweather.android.ui.weather.WeatherActivity
 
 
-/**
+/*
  * 文件名: PlaceFragment
  * 作者: KloseYu
  * 日期: 2021/10/25
  * 描述: PlaceFragment
  */
+
 class PlaceFragment : Fragment() {
 
 
