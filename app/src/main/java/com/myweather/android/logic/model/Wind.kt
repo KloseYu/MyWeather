@@ -2,7 +2,7 @@ package com.myweather.android.logic.model
 
 
 
-/**
+/*
  * 文件名: Wind
  * 作者: KloseYu
  * 日期: 2021/10/28
