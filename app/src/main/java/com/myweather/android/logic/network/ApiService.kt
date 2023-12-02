@@ -19,7 +19,7 @@ import retrofit2.http.Query
  */
 interface ApiService {
     //全球地区api
-    @GET("v2/place?${TOKEN}&lang=zh_CN")
+    @GET("v2.6/place?${TOKEN}&lang=zh_CN")
     fun searchPlaces(@Query("query") query:String):Call<PlaceResponse>
 
     //实时天气api
