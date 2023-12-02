@@ -26,11 +26,12 @@ interface ApiService {
     @GET("v2.6/${TOKEN}/{lng},{lat}/realtime.json")
     fun getRealWeather(@Path("lng") lng:String,@Path("lat") lat:String):Call<RealtimeResponse>
 
-    //24小时天气api @GET("v2.6/${TOKEN}/{lng},{lat}/hourly.json?hourlysteps=24")
+    //24小时天气api 
+    @GET("v2.6/${TOKEN}/{lng},{lat}/hourly.json?hourlysteps=24")
     fun getHourlyWeather(@Path("lng") lng:String,@Path("lat") lat:String):Call<HourlyResponse>
 
 
     //最近天气api
-   @GET("v2.6/${TOKEN}/{lng},{lat}/daily.json")
+    @GET("v2.6/${TOKEN}/{lng},{lat}/daily.json")
     fun getDailyWeather(@Path("lng") lng:String,@Path("lat") lat:String):Call<DailyResponse>
 }
