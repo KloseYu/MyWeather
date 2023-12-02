@@ -16,8 +16,8 @@ class MyWeatherApplication : Application(){
         //caiyun CN
         const val TOKEN ="8yTp8hXFWAxo0n5C"
 
-        //weather UN
-        const val TOKEN1 = "666f0d45761147d98fa232047231311"
+        //高德 UN
+        //const val cityTOKEN = "666f0d45761147d98fa232047231311"
 
         @SuppressLint("StaticFieldLeak")
         lateinit var context: Context
