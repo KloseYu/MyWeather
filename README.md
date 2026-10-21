@@ -111,9 +111,9 @@ compose 分支的 `LifeIndexSection` 严格保持与传统版本 `life_index.xml
 
 | API | 用途 | Key 配置 |
 |-----|------|----------|
-| 彩云天气 | 实时/逐日/逐时天气数据 | `CaiYun_Key`（已内置） |
+| 彩云天气 | 实时/7日/24小时天气数据 | `CaiYun_Key`（已内置） |
 | 高德地图 | 国内逆地理编码 | `AMAP_KEY`（已内置） |
-| Google Geocoding | 海外逆地理编码 | `GOOGLE_KEY`（需自行申请） |
+| Google Geocoding | 海外及港澳台逆地理编码 | `GOOGLE_KEY`（需自行申请） |
 
 > 国内定位优先使用高德 API，海外及港澳台地区需配置 Google API Key。
 
