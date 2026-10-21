@@ -50,7 +50,8 @@ import com.myweather.android.logic.model.Place
 import com.myweather.android.ui.place.PlaceViewModel
 
 /**
- * 城市搜索与管理界面，作为侧边栏内容展示。
+ * 城市搜索与管理界面，作为侧边栏内容展示，
+ * 对应传统版本的 PlaceFragment + fragment_place.xml。
  *
  * 布局结构：
  * - 顶部搜索栏：包含城市名输入框和定位按钮；

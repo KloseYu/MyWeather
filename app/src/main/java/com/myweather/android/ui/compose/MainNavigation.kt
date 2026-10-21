@@ -41,7 +41,7 @@ import com.myweather.android.ui.weather.WeatherViewModel
 import kotlinx.coroutines.launch
 
 /**
- * 应用主导航容器。
+ * 应用主导航容器，替代传统版本的 DrawerLayout + ViewPager2 结构。
  *
  * 使用 [ModalNavigationDrawer] 实现侧边栏 + 主内容的经典布局：
  * - 侧边栏（320dp 宽）承载 [PlaceScreen] 城市搜索/管理界面；

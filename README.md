@@ -2,7 +2,7 @@
 
 一款基于 **彩云天气 API** 的 Android 天气应用，使用 **Kotlin + Jetpack Compose** 构建，支持全球城市搜索、实时定位、逐时/逐日预报、生活指数展示，以及深色模式。
 
-> 本项目为 `compose` 分支，采用 Jetpack Compose 完全重写 UI 层，替代了 `main` 分支中基于 View + ViewPager2 的传统实现。
+> 本项目为 `compose` 分支，采用 Jetpack Compose 完全重写 UI 层，替代了 `main` 分支中基于 View + ViewPager2 的传统实现。两个分支共享相同的 `logic` 层（ViewModel / Repository / Model / Network），仅 UI 层实现不同。
 
 ## 功能特性
 
@@ -14,7 +14,7 @@
 | 实时天气 | 温度、天气描述、AQI（中国/海外双标准）、风速、湿度 |
 | 逐时预报 | 24 小时温度柱状图 + 水波纹效果，可水平滚动 |
 | 逐日预报 | 7 日温度范围柱状图 + 水波纹效果，可水平滚动 |
-| 生活指数 | 感冒风险、穿衣建议、紫外线强度、洗车建议 |
+| 生活指数 | 感冒、穿衣、实时紫外线、洗车（文字与传统版本完全同步） |
 | 下拉刷新 | PullToRefreshBox 支持下拉刷新天气数据 |
 | 左右滑动 | 天气界面左右滑动切换城市 |
 | 深色模式 | 完整适配系统深色模式，所有界面自动切换配色 |
@@ -39,7 +39,7 @@
 app/src/main/java/com/myweather/android/
 ├── MainActivity.kt                  # Compose 入口 Activity
 ├── MyWeatherApplication.kt          # 全局 Application，持有 API Key
-├── logic/
+├── logic/                           # ← 与 main 分支共享，无差异
 │   ├── Repository.kt                # 数据仓库，封装网络 + 本地存储
 │   ├── dao/
 │   │   └── PlaceDao.kt              # SharedPreferences 城市持久化
@@ -47,8 +47,8 @@ app/src/main/java/com/myweather/android/
 │   │   ├── Weather.kt               # 聚合天气数据 + AQI 工具方法
 │   │   ├── Sky.kt                   # 天气代码 → 图标/背景映射
 │   │   ├── RealtimeResponse.kt      # 实时天气响应模型
-│   │   ├── DailyResponse.kt         # 逐日预报响应模型
-│   │   ├── HourlyResponse.kt        # 逐时预报响应模型
+│   │   ├── DailyResponse.kt         # 7日预报响应模型（含 LifeIndex）
+│   │   ├── HourlyResponse.kt        # 24小时时预报响应模型
 │   │   ├── PlaceResponse.kt         # 城市搜索响应模型
 │   │   └── ...                     # 格式化工具类
 │   └── network/
@@ -58,22 +58,25 @@ app/src/main/java/com/myweather/android/
 │           ├── amap/                # 高德逆地理编码 Service
 │           └── google/              # Google 逆地理编码 Service
 └── ui/
-    ├── compose/
-    │   ├── MainNavigation.kt        # 主导航（侧边栏 + 天气内容）
-    │   ├── PlaceScreen.kt           # 城市搜索/管理界面
-    │   ├── WeatherScreen.kt         # 天气详情界面（含图表绘制）
-    │   └── WeatherIcons.kt          # 自定义矢量图标
+    ├── compose/                     # ← compose 分支新增，替代 weather/ 下的 View 实现
+    │   ├── MainNavigation.kt        # 主导航（ModalNavigationDrawer 侧边栏 + 天气内容）
+    │   ├── PlaceScreen.kt           # 城市搜索/管理界面（对应 PlaceFragment）
+    │   ├── WeatherScreen.kt         # 天气详情界面（对应 WeatherPageFragment，含 Canvas 图表）
+    │   └── WeatherIcons.kt          # 自定义矢量图标（Home / AddCity / Locate / Delete）
     ├── theme/
-    │   ├── Color.kt                 # 配色常量
+    │   ├── Color.kt                 # 配色常量（浅色/深色成对定义）
     │   ├── Theme.kt                 # Material3 主题定义
     │   └── Type.kt                  # 排版规范
     ├── place/
     │   └── PlaceViewModel.kt        # 城市搜索 ViewModel
     └── weather/
-        └── WeatherViewModel.kt      # 天气数据 ViewModel
+        ├── WeatherViewModel.kt      # 天气数据 ViewModel
+        ├── WeatherActivity.kt       # 传统版本 Activity（main 分支使用）
+        ├── WeatherPageFragment.kt   # 传统版本 Fragment（main 分支使用）
+        └── view/                    # 传统版本自定义 View（DailyChartView 等）
 ```
 
-## Compose 分支与 main 分支的差异
+## compose 分支与 main 分支的差异
 
 | 方面 | main 分支 | compose 分支 |
 |------|-----------|-------------|
@@ -85,16 +88,24 @@ app/src/main/java/com/myweather/android/
 | 刷新 | SwipeRefreshLayout | PullToRefreshBox |
 | 主题 | XML styles/themes | Compose Theme + ColorScheme |
 | 边到边 | 手动配置 | enableEdgeToEdge() |
+| 生活指数 | life_index.xml 硬编码标签 | LifeIndexSection Composable，文字与 XML版本 完全同步 |
+
+### 生活指数文字同步说明
+
+compose 分支的 `LifeIndexSection` 严格保持与传统版本 `life_index.xml` 一致：
+
+| 项目 | XML 标签 | Compose label | 数据绑定 |
+|------|---------|---------------|---------|
+| 感冒 | `android:text="感冒"` | `"感冒"` | `isNotEmpty()` 守卫 |
+| 穿衣 | `android:text="穿衣"` | `"穿衣"` | `isNotEmpty()` 守卫 |
+| 实时紫外线 | `android:text="实时紫外线"` | `"实时紫外线"` | `isNotEmpty()` 守卫 |
+| 洗车 | `android:text="洗车"` | `"洗车"` | `isNotEmpty()` 守卫 |
 
 ## 构建与运行
 
-
-
-1.在 Android Studio 中打开项目，同步 Gradle。
-
-2配置 API Key（如需使用 Google 逆地理编码）： 在 `MyWeatherApplication.kt` 中填写 `GOOGLE_KEY`
-
-3连接 Android 设备或模拟器，点击 Run。
+1. 在 Android Studio 中打开项目，同步 Gradle。
+2. 配置 API Key（如需使用 Google 逆地理编码）：在 `MyWeatherApplication.kt` 中填写 `GOOGLE_KEY`。
+3. 连接 Android 设备或模拟器，点击 Run。
 
 ## API 说明
 

@@ -72,13 +72,14 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 /**
- * 天气详情主界面。
+ * 天气详情主界面，与传统版本 [WeatherPageFragment] 功能对齐。
  *
- * 整体布局为可垂直滚动的列，包含四个卡片区域：
+ * 整体布局为可垂直滚动的列，自上而下包含四个卡片区域：
  * 1. [NowSection] — 当前天气概况（温度、天气描述、AQI、风速、湿度）；
  * 2. [HourlySection] — 24 小时逐时预报图表；
  * 3. [DailySection] — 7 日逐日预报图表；
- * 4. [LifeIndexSection] — 生活指数（感冒、穿衣、紫外线、洗车）。
+ * 4. [LifeIndexSection] — 生活指数（感冒、穿衣、实时紫外线、洗车），
+ *    文字标签与数据绑定逻辑均与 [life_index.xml] 保持一致。
  *
  * 外层包裹 [PullToRefreshBox] 支持下拉刷新，
  * 天气数据为 null 时展示"加载中..."占位文字。
@@ -175,7 +176,7 @@ fun WeatherScreen(
 }
 
 /**
- * 当前天气概况区域。
+ * 当前天气概况区域，对应传统版本的 [NowLayout] + now.xml。
  *
  * 顶部以天气背景图铺满，覆盖以下信息：
  * - 导航栏：左侧主页按钮、中间城市名、右侧添加城市按钮；
@@ -360,7 +361,7 @@ private fun NowSection(
 }
 
 /**
- * 24 小时逐时预报区域。
+ * 24 小时逐时预报区域，对应传统版本的 [HourlyChartView] + hourly.xml。
  *
  * 以卡片形式包裹 [HourlyChart]，
  * 标题为"24小时预报"，图表可水平滚动。
@@ -410,7 +411,7 @@ private fun HourlySection(
 }
 
 /**
- * 7 日逐日预报区域。
+ * 7 日逐日预报区域，对应传统版本的 [DailyChartView] + forecast.xml。
  *
  * 以卡片形式包裹 [DailyChart]，
  * 标题为"7日预报"，图表可水平滚动。
@@ -465,11 +466,13 @@ private fun DailySection(
 }
 
 /**
- * 生活指数区域。
+ * 生活指数区域，对应传统版本的 life_index.xml。
  *
  * 以 2×2 网格展示四项生活指数：
- * 感冒风险、穿衣建议、紫外线强度、洗车建议。
- * 每项由图标 + 标签 + 描述文字组成。
+ * 感冒、穿衣、实时紫外线、洗车。
+ * 文字标签与 [life_index.xml] 中的硬编码文本完全一致，
+ * 数据绑定使用与传统版本相同的 [List.isNotEmpty] 守卫模式：
+ * 仅当列表非空时取 [0].desc，否则显示空字符串。
  *
  * @param lifeIndex 生活指数数据
  */
@@ -500,13 +503,13 @@ private fun LifeIndexSection(
                 LifeIndexItem(
                     iconRes = R.drawable.ic_coldrisk,
                     label = "感冒",
-                    desc = lifeIndex.coldRisk.getOrNull(0)?.desc ?: "",
+                    desc = if (lifeIndex.coldRisk.isNotEmpty()) lifeIndex.coldRisk[0].desc else "",
                     modifier = Modifier.weight(1f)
                 )
                 LifeIndexItem(
                     iconRes = R.drawable.ic_dressing,
                     label = "穿衣",
-                    desc = lifeIndex.dressing.getOrNull(0)?.desc ?: "",
+                    desc = if (lifeIndex.dressing.isNotEmpty()) lifeIndex.dressing[0].desc else "",
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -519,13 +522,13 @@ private fun LifeIndexSection(
                 LifeIndexItem(
                     iconRes = R.drawable.ic_ultraviolet,
                     label = "实时紫外线",
-                    desc = lifeIndex.ultraviolet.getOrNull(0)?.desc ?: "",
+                    desc = if (lifeIndex.ultraviolet.isNotEmpty()) lifeIndex.ultraviolet[0].desc else "",
                     modifier = Modifier.weight(1f)
                 )
                 LifeIndexItem(
                     iconRes = R.drawable.ic_carwashing,
                     label = "洗车",
-                    desc = lifeIndex.carWashing.getOrNull(0)?.desc ?: "",
+                    desc = if (lifeIndex.carWashing.isNotEmpty()) lifeIndex.carWashing[0].desc else "",
                     modifier = Modifier.weight(1f)
                 )
             }
