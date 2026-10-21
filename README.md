@@ -38,7 +38,7 @@
 ```
 app/src/main/java/com/myweather/android/
 ├── MainActivity.kt                  # Compose 入口 Activity
-├── MyWeatherApplication.kt          # 全局 Application，持有 API Key
+├── MyWeatherApplication.kt          # 全局 Application，API Key 集中配置
 ├── logic/                           # ← 与 main 分支共享，无差异
 │   ├── Repository.kt                # 数据仓库，封装网络 + 本地存储
 │   ├── dao/
@@ -48,7 +48,7 @@ app/src/main/java/com/myweather/android/
 │   │   ├── Sky.kt                   # 天气代码 → 图标/背景映射
 │   │   ├── RealtimeResponse.kt      # 实时天气响应模型
 │   │   ├── DailyResponse.kt         # 7日预报响应模型（含 LifeIndex）
-│   │   ├── HourlyResponse.kt        # 24小时时预报响应模型
+│   │   ├── HourlyResponse.kt        # 24小时预报响应模型
 │   │   ├── PlaceResponse.kt         # 城市搜索响应模型
 │   │   └── ...                     # 格式化工具类
 │   └── network/
@@ -88,7 +88,7 @@ app/src/main/java/com/myweather/android/
 | 刷新 | SwipeRefreshLayout | PullToRefreshBox |
 | 主题 | XML styles/themes | Compose Theme + ColorScheme |
 | 边到边 | 手动配置 | enableEdgeToEdge() |
-| 生活指数 | life_index.xml 硬编码标签 | LifeIndexSection Composable，文字与 XML版本 完全同步 |
+| 生活指数 | life_index.xml 硬编码标签 | LifeIndexSection Composable，文字与 XML 完全同步 |
 
 ### 生活指数文字同步说明
 
@@ -103,19 +103,44 @@ compose 分支的 `LifeIndexSection` 严格保持与传统版本 `life_index.xml
 
 ## 构建与运行
 
-1. 在 Android Studio 中打开项目，同步 Gradle。
-2. 配置 API Key（如需使用 Google 逆地理编码）：在 `MyWeatherApplication.kt` 中填写 `GOOGLE_KEY`。
-3. 连接 Android 设备或模拟器，点击 Run。
+1. 克隆仓库并切换到 compose 分支：
+   ```bash
+   git clone https://github.com/KloseYu/MyWeather.git
+   cd MyWeather
+   git checkout compose
+   ```
+2. 在 Android Studio 中打开项目，同步 Gradle。
+3. **配置 API Key**（见下方说明）。
+4. 连接 Android 设备或模拟器，点击 Run。
 
-## API 说明
+## API Key 配置
 
-| API | 用途 | Key 配置 |
-|-----|------|----------|
-| 彩云天气 | 实时/7日/24小时天气数据 | `CaiYun_Key`（已内置） |
-| 高德地图 | 国内逆地理编码 | `AMAP_KEY`（已内置） |
-| Google Geocoding | 海外及港澳台逆地理编码 | `GOOGLE_KEY`（需自行申请） |
+项目不内置任何 API Key，所有 Key 均以占位符形式存在，需自行申请并填入 `MyWeatherApplication.kt`：
 
-> 国内定位优先使用高德 API，海外及港澳台地区需配置 Google API Key。
+```kotlin
+companion object {
+    const val CaiYun_Key = "YOUR_CAIYUN_KEY"    // 彩云天气
+    const val AMAP_KEY   = "YOUR_AMAP_KEY"      // 高德地图
+    const val GOOGLE_KEY = " "                   // Google Geocoding（可选）
+}
+```
+
+同时需要将对应 Key 填入以下位置（保持一致）：
+
+| 文件 | 常量 | 对应 Key |
+|------|------|---------|
+| `WeatherService.kt` → `CaiYunToken.token` | `"YOUR_CAIYUN_KEY"` | 彩云天气 |
+| `AmapService.kt` → `AmapApiKey.KEY` | `"YOUR_AMAP_KEY"` | 高德地图 |
+
+### 申请地址
+
+| API | 用途 | 申请地址 |
+|-----|------|---------|
+| 彩云天气 | 实时/7日/24小时天气数据 | https://www.caiyunapp.com/h5/ |
+| 高德地图 | 国内逆地理编码 | https://lbs.amap.com/ |
+| Google Geocoding | 海外及港澳台逆地理编码（可选） | Google Cloud Console |
+
+> 国内定位优先使用高德 API，海外及港澳台地区需额外配置 Google API Key。
 
 ## 许可证
 
