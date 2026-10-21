@@ -22,7 +22,10 @@ interface WeatherService {
     suspend fun getHourlyWeather(@Path("lng") lng: String, @Path("lat") lat: String): HourlyResponse
 }
 
-// 彩云天气 API token
+/**
+ * 彩云天气 API token，与 [com.myweather.android.MyWeatherApplication.CaiYun_Key] 保持一致。
+ * 请在 MyWeatherApplication 中配置实际 Key。
+ */
 object CaiYunToken {
-    const val token = "8yTp8hXFWAxo0n5C"
+    const val token = "YOUR_CAIYUN_KEY"
 }

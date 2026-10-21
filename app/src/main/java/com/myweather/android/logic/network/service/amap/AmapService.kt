@@ -28,9 +28,12 @@ interface AmapReverseGeocodeService {
     ): AmapResponse
 }
 
-// 高德 API Key
+/**
+ * 高德 API Key，与 [com.myweather.android.MyWeatherApplication.AMAP_KEY] 保持一致。
+ * 请在 MyWeatherApplication 中配置实际 Key。
+ */
 object AmapApiKey {
-    const val KEY = "674cb69f17c648a6028a75c6bff8037c"
+    const val KEY = "YOUR_AMAP_KEY"
 }
 
 /**
