@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/swipeRefresh"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.myweather.android.ui.weather.view.NestedScrollView
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/weatherLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scrollbars="none"
+        android:overScrollMode="never"
+        android:visibility="invisible"
+        tools:context=".ui.weather.WeatherPageFragment">
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <include
+                android:id="@+id/includeNow"
+                layout="@layout/now" />
+
+            <include
+                android:id="@+id/includeHourly"
+                layout="@layout/hourly" />
+
+            <include
+                android:id="@+id/includeForecast"
+                layout="@layout/forecast" />
+
+            <include
+                android:id="@+id/includeLifeIndex"
+                layout="@layout/life_index" />
+
+        </LinearLayout>
+
+    </com.myweather.android.ui.weather.view.NestedScrollView>
+
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
