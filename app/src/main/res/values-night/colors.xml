@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorActionBar">#FF172233</color>
+    <color name="colorDrawerBackground">#FF1B2635</color>
+    <color name="colorWeatherText">#FFFFFFFF</color>
+    <color name="colorForecastText">#FFE0E0E0</color>
+    <color name="colorSearchBg">#FF2C2C2C</color>
+    <color name="colorSearchHint">#FF888888</color>
+    <color name="colorSearchText">#FFFFFFFF</color>
+    <color name="colorDivider">#FF3C3C3C</color>
+    <color name="colorSavedLabel">#FF999999</color>
+    <color name="colorCardOverlay">#D9404055</color>
+</resources>
