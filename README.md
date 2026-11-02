@@ -107,7 +107,7 @@ companion object {
 
 | API | 用途 | 申请地址 |
 |-----|------|---------|
-| 彩云天气 | 实时/7日/24小时天气数据 | https://www.caiyunapp.com/h5/ |
+| 彩云天气 | 实时/7日/24小时天气数据 | https://www.caiyunapp.com/ |
 | 高德地图 | 国内逆地理编码 | https://lbs.amap.com/ |
 | Google Geocoding | 海外及港澳台逆地理编码（可选） | Google Cloud Console |
 
