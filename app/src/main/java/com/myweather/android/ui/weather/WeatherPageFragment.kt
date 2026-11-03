@@ -52,7 +52,12 @@ class WeatherPageFragment : Fragment() {
         // 设置定位信息并判断温度单位
         viewModel.locationLng = placeLng
         viewModel.locationLat = placeLat
+        // 标题的唯一来源是 Activity 里的城市列表：Fragment 只用坐标认领自己的城市，
+        // 这样即使页面 Fragment 是旧列表创建的，标题也不会和侧边栏显示的地区对不上
+        placeNameStr = authoritativePlaceTitle() ?: placeNameStr
         viewModel.placeName = placeNameStr
+        // 城市名与天气请求解耦：先绑定标题，避免请求失败时顶部标题空白
+        binding.includeNow.placeName.text = placeNameStr
         val lng = placeLng.toDoubleOrNull() ?: 0.0
         val lat = placeLat.toDoubleOrNull() ?: 0.0
         viewModel.isFahrenheitCountry = isFahrenheitCountry(lng, lat)
@@ -64,14 +69,14 @@ class WeatherPageFragment : Fragment() {
             if (placeFragment != null) {
                 placeFragment.tryLocateAndRefresh(act)
             } else {
-                act?.binding?.drawerLayout?.openDrawer(androidx.core.view.GravityCompat.START)
+                act?.openDrawerForSearch()
             }
         }
 
         // 添加按钮：打开侧边栏搜索新城市
         binding.includeNow.addBtn.setOnClickListener {
             val act = activity as? WeatherActivity
-            act?.binding?.drawerLayout?.openDrawer(androidx.core.view.GravityCompat.START)
+            act?.openDrawerForSearch()
         }
 
         // 下拉刷新
@@ -99,6 +104,25 @@ class WeatherPageFragment : Fragment() {
         }
 
         refreshWeather()
+    }
+
+    // 用坐标认领所属城市：坐标即城市身份，名称只是展示信息
+    fun matchesPlace(lng: String, lat: String): Boolean = placeLng == lng && placeLat == lat
+
+    // 由 Activity 在列表或当前页变化时校准标题，保证与侧边栏显示的地区一致
+    fun applyPlaceTitle(title: String) {
+        if (title.isBlank() || title == placeNameStr) return
+        placeNameStr = title
+        viewModel.placeName = title
+        _binding?.includeNow?.placeName?.text = title
+    }
+
+    private fun authoritativePlaceTitle(): String? {
+        val act = activity as? WeatherActivity ?: return null
+        val place = act.getPlaceList()
+            .firstOrNull { it.location.lng == placeLng && it.location.lat == placeLat }
+            ?: return null
+        return act.titleOf(place)
     }
 
     /**
@@ -149,7 +173,6 @@ class WeatherPageFragment : Fragment() {
      * 实时天气（温度/天气/空气质量/风力/湿度）、逐小时图表、逐日图表、生活指数。
      */
     private fun showWeatherInfo(weather: Weather) {
-        binding.includeNow.placeName.text = viewModel.placeName
         val realtime = weather.realtime
         val daily = weather.daily
 

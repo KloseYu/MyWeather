@@ -3,7 +3,6 @@ package com.myweather.android.ui.place
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.location.Criteria
 import android.location.LocationListener
 import android.location.LocationManager
@@ -19,6 +18,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.myweather.android.MainActivity
+import com.myweather.android.R
 import com.myweather.android.databinding.FragmentPlaceBinding
 import com.myweather.android.logic.model.Place
 import com.myweather.android.ui.weather.WeatherActivity
@@ -105,10 +105,10 @@ class PlaceFragment : Fragment() {
             val places = result.getOrNull()
             if (places != null) {
                 binding.recyclerView.visibility = View.VISIBLE
-                binding.divider.visibility = View.VISIBLE
                 viewModel.placeList.clear()
                 viewModel.placeList.addAll(places)
                 adapter.notifyDataSetChanged()
+                updateDividerVisibility()
             } else {
                 val msg = result.exceptionOrNull()?.message ?: "未知错误"
                 Toast.makeText(activity, "搜索失败: $msg", Toast.LENGTH_LONG).show()
@@ -123,15 +123,9 @@ class PlaceFragment : Fragment() {
                 val act = pendingWeatherActivity
                 if (act is WeatherActivity) {
                     pendingWeatherActivity = null
-                    if (!act.isViewPagerReady()) {
-                        act.setupWithPlace(place)
-                    } else {
-                        act.refreshPlaces()
-                        act.switchToPlace(place)
-                    }
+                    act.openPlace(place)
                 } else if (activity is WeatherActivity) {
-                    (activity as WeatherActivity).refreshPlaces()
-                    (activity as WeatherActivity).switchToPlace(place)
+                    (activity as WeatherActivity).openPlace(place)
                 } else {
                     navigateToWeather(place)
                 }
@@ -156,6 +150,23 @@ class PlaceFragment : Fragment() {
         if (activity is MainActivity && !viewModel.isPlaceSaved()) {
             tryAutoLocate()
         }
+    }
+
+    /**
+     * 聚焦搜索框并弹出键盘，供"添加城市""定位失败后手动搜索"这类明确的搜索入口调用。
+     *
+     * 用户是带着"要输入城市名"的目的打开面板的，如果还要再点一次输入框键盘才出来，
+     * 这一步既多余又让人看不出该做什么。键盘弹出放在延迟里：
+     * 抽屉此时还在做开启动画，窗口尚未获得焦点，立刻调用 showSoftInput 会被系统忽略。
+     */
+    fun focusSearch() {
+        val edit = _binding?.searchPlaceEdit ?: return
+        edit.requestFocus()
+        edit.postDelayed({
+            val manager = context?.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+                as? android.view.inputmethod.InputMethodManager
+            manager?.showSoftInput(edit, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        }, 200L)
     }
 
     private fun hasLocationPermission(): Boolean {
@@ -295,12 +306,7 @@ class PlaceFragment : Fragment() {
         val act = activity
         if (act is WeatherActivity) {
             act.binding.drawerLayout.closeDrawers()
-            if (!act.isViewPagerReady()) {
-                act.setupWithPlace(place)
-            } else {
-                act.refreshPlaces()
-                act.switchToPlace(place)
-            }
+            act.openPlace(place)
         } else {
             navigateToWeather(place)
         }
@@ -308,41 +314,52 @@ class PlaceFragment : Fragment() {
 
     // 刷新已保存城市列表（含 UI 颜色适配）
     fun refreshSavedPlaces() {
+        // Activity 可能在 Fragment 视图创建前就推送刷新（如 onCreate 阶段初始化列表），
+        // 此时还没有视图可更新，直接跳过，等 onViewCreated 的首次刷新即可
+        if (_binding == null) return
         viewModel.getSavedPlaceList()
-        val isInDrawer = activity is WeatherActivity
-        if (isInDrawer) {
-            binding.savedLabel.setTextColor(Color.parseColor("#BDBDBD"))
-            binding.divider.setBackgroundColor(Color.parseColor("#33FFFFFF"))
+        val act = activity
+        val isInDrawer = act is WeatherActivity
+        // 抽屉内直接复用 WeatherActivity 的城市列表，与 ViewPager 页面同源同序
+        val displayList: List<Place> = if (act is WeatherActivity) {
+            act.getPlaceList()
         } else {
-            binding.savedLabel.setTextColor(Color.parseColor("#757575"))
-            binding.divider.setBackgroundColor(Color.parseColor("#1F000000"))
+            viewModel.savedPlaceList
         }
-        if (viewModel.savedPlaceList.isNotEmpty()) {
+        val currentIndex = if (act is WeatherActivity) act.getCurrentIndex() else -1
+        // 颜色一律取主题资源：colorSavedLabel / colorDivider 在 values 与 values-night
+        // 各有一套，浅色模式自动变深、深色模式自动变浅。
+        // 之前这里写死了颜色值，等于固定成"深色模式"的样子，浅色模式下就成了
+        // 浅灰字压浅蓝底，看不清。
+        binding.savedLabel.setTextColor(ContextCompat.getColor(requireContext(), R.color.colorSavedLabel))
+        binding.divider.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.colorDivider))
+        if (displayList.isNotEmpty()) {
             binding.savedLabel.visibility = View.VISIBLE
-            val currentLng = getCurrentLng()
-            val currentLat = getCurrentLat()
             savedAdapter = SavedPlaceAdapter(
-                viewModel.savedPlaceList,
-                currentLng,
-                currentLat,
+                displayList,
+                currentIndex,
                 isInDrawer = isInDrawer,
                 showDeleteButton = isInDrawer,
-                onPlaceClick = { place ->
-                    val act = activity
-                    if (act is WeatherActivity) {
-                        act.binding.drawerLayout.closeDrawers()
-                        act.switchToPlace(place)
-                    } else {
-                        navigateToWeather(place)
+                onPlaceClick = { position ->
+                    displayList.getOrNull(position)?.let { place ->
+                        val cur = activity
+                        if (cur is WeatherActivity) {
+                            cur.binding.drawerLayout.closeDrawers()
+                            cur.switchToIndex(position)
+                        } else {
+                            navigateToWeather(place)
+                        }
                     }
                 },
-                onPlaceDelete = { place ->
-                    viewModel.deletePlace(place)
-                    val act = activity
-                    if (act is WeatherActivity) {
-                        act.refreshPlaces()
+                onPlaceDelete = { position ->
+                    displayList.getOrNull(position)?.let { place ->
+                        viewModel.deletePlace(place)
+                        val cur = activity
+                        if (cur is WeatherActivity) {
+                            cur.refreshPlaces()
+                        }
+                        refreshSavedPlaces()
                     }
-                    refreshSavedPlaces()
                 }
             )
             binding.savedPlacesRecyclerView.adapter = savedAdapter
@@ -355,22 +372,20 @@ class PlaceFragment : Fragment() {
         }
     }
 
-    // 搜索框有内容 + 有已保存城市时显示分隔线
+    /**
+     * 分隔线是"已保存城市"与"搜索结果"两段列表的分界，
+     * 只有两段同时在场时才有存在的意义。
+     * 之前只判断了已保存城市非空，搜索框为空时结果列表是隐藏的，
+     * 于是分隔线孤零零挂在已保存城市下方，看起来就是一条不知从哪来的横线。
+     */
     private fun updateDividerVisibility() {
+        val act = activity
+        val list = if (act is WeatherActivity) act.getPlaceList() else viewModel.savedPlaceList
+        val hasResults =
+            binding.recyclerView.visibility == View.VISIBLE && viewModel.placeList.isNotEmpty()
         binding.divider.visibility = if (
-            viewModel.savedPlaceList.isNotEmpty() &&
-            binding.searchPlaceEdit.text.isEmpty()
+            list.isNotEmpty() && hasResults
         ) View.VISIBLE else View.GONE
-    }
-
-    private fun getCurrentLng(): String {
-        val act = activity
-        return if (act is WeatherActivity) act.getCurrentPlace()?.location?.lng ?: "" else ""
-    }
-
-    private fun getCurrentLat(): String {
-        val act = activity
-        return if (act is WeatherActivity) act.getCurrentPlace()?.location?.lat ?: "" else ""
     }
 
     // 从 WeatherActivity 初始化时调用的定位入口

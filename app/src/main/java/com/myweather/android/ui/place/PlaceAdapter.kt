@@ -1,6 +1,7 @@
 package com.myweather.android.ui.place
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.RecyclerView
@@ -30,7 +31,14 @@ class PlaceAdapter(private val fragment: Fragment, private val placeList: List<P
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val place = placeList[position]
         holder.binding.placeName.text = place.name
-        holder.binding.placeAddress.text = place.address
+        // 地址与城市名相同时不重复显示
+        val address = place.address.trim()
+        if (address.isEmpty() || address == place.name.trim()) {
+            holder.binding.placeAddress.visibility = View.GONE
+        } else {
+            holder.binding.placeAddress.visibility = View.VISIBLE
+            holder.binding.placeAddress.text = address
+        }
     }
 
     override fun getItemCount() = placeList.size

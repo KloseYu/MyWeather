@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.myweather.android.ui.weather.view.NowLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nowLayout"
     android:orientation="vertical"
     android:layout_width="match_parent"
@@ -24,15 +25,20 @@
 
         <TextView
                 android:id="@+id/placeName"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="55dp"
                 android:layout_marginEnd="55dp"
                 android:layout_gravity="center"
+                android:gravity="center"
                 android:singleLine="true"
                 android:ellipsize="middle"
                 android:textColor="@color/colorWeatherText"
-                android:textSize="22sp" />
+                android:textSize="22sp"
+                app:autoSizeTextType="uniform"
+                app:autoSizeMinTextSize="13sp"
+                app:autoSizeMaxTextSize="22sp"
+                app:autoSizeStepGranularity="1sp" />
 
         <ImageButton
                 android:id="@+id/addBtn"
