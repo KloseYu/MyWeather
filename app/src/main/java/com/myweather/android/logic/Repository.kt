@@ -5,6 +5,7 @@ import androidx.lifecycle.liveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import com.myweather.android.MyWeatherApplication
 import com.myweather.android.logic.dao.PlaceDao
 import com.myweather.android.logic.model.Place
 import com.myweather.android.logic.model.Weather
@@ -31,7 +32,7 @@ object Repository {
         if (place != null) {
             Result.success(place)
         } else {
-            Result.failure(RuntimeException("海外及港澳台地区需配置Google API Key"))
+            Result.failure(RuntimeException(geocodeFailureMessage()))
         }
     }
 
@@ -48,6 +49,15 @@ object Repository {
             }
             emit(result)
         }
+
+    // 逆地理编码失败提示：区分「未配置 Google Key」与「已配置但仍失败」
+    private fun geocodeFailureMessage(): String {
+        return if (MyWeatherApplication.GOOGLE_KEY.isNotBlank()) {
+            "定位失败，请检查网络后重试"
+        } else {
+            "海外及港澳台地区需配置 Google API Key"
+        }
+    }
 
     fun savePlace(place: Place) = PlaceDao.savePlace(place)
 

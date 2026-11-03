@@ -37,9 +37,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,6 +86,8 @@ fun PlaceScreen(
 ) {
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val searchFocusRequester = remember { FocusRequester() }
 
     var searchQuery by remember { mutableStateOf("") }
     val searchResult by viewModel.placeLiveData.observeAsState()
@@ -105,6 +110,10 @@ fun PlaceScreen(
     LaunchedEffect(isDrawerOpen) {
         if (isDrawerOpen) {
             savedPlaces.value = viewModel.getSavedPlaceList()
+            // 侧边栏只用于搜索与管理城市，打开即聚焦搜索框并弹出键盘，
+            // 用户不必再点一次输入框才知道该做什么
+            searchFocusRequester.requestFocus()
+            keyboardController?.show()
         }
     }
 
@@ -141,6 +150,7 @@ fun PlaceScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(40.dp)
+                        .focusRequester(searchFocusRequester)
                         .padding(start = 0.dp, end = 6.dp),
                     placeholder = { Text("搜索城市", color = searchHintColor, fontSize = 14.sp) },
                     singleLine = true,
