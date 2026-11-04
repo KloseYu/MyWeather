@@ -2,13 +2,13 @@
 
 一款基于 **彩云天气 API** 和 **高德地图 POI 搜索** 的 Android 天气应用，采用 Kotlin + View + DataBinding 构建，支持多城市管理、逐小时/逐日预报图表展示、左右滑动切换城市，以及深色模式。
 
-> 本项目为 `main` 分支，采用传统 View 体系实现 UI。`compose` 分支使用 Jetpack Compose 重写了 UI 层，两个分支共享相同的 `logic` 层。
+> 本项目为 `main` 分支，采用传统 View 体系实现 UI。`compose` 分支使用 Jetpack Compose 重写了 UI 层。两个分支的 `logic` 层大部分共享（model / dao / service 接口一致），搜索链路与数据仓库各自实现。
 
 ## 功能特性
 
 | 功能 | 说明 |
 |------|------|
-| 城市搜索 | 基于高德地图 POI 文本搜索，输入关键词即可搜索国内外城市 |
+| 城市搜索 | 高德 POI 文本搜索 + 区划接口：大陆走高德，港澳台及海外走 Google；「朝阳」「吉林」这类同名行政区全部并列展示 |
 | 一键定位 | 基于 GPS + 高德/Google 逆地理编码自动获取当前城市 |
 | 多城市管理 | 保存多个城市，在天气页左右滑动切换 |
 | 实时天气 | 温度、体感温度、风速、湿度、气压、能见度等 |
@@ -38,7 +38,7 @@
 app/src/main/java/com/myweather/android/
 ├── MainActivity.kt                    # 入口 Activity，判断是否有已保存城市
 ├── MyWeatherApplication.kt            # 全局 Application，API Key 集中配置
-├── logic/                             # ← 与 compose 分支共享，无差异
+├── logic/                             # ← 与 compose 分支大体共享，搜索链路各有实现
 │   ├── Repository.kt                  # 数据仓库单例
 │   ├── dao/
 │   │   └── PlaceDao.kt               # 城市本地持久化（SharedPreferences）
@@ -98,10 +98,13 @@ companion object {
 
 同时需要将对应 Key 填入以下位置（保持一致）：
 
-| 文件 | 常量 | 对应 Key |
-|------|------|---------|
-| `WeatherService.kt` → `CaiYunToken.token` | `"YOUR_CAIYUN_KEY"` | 彩云天气 |
-| `AmapService.kt` → `AmapApiKey.KEY` | `"YOUR_AMAP_KEY"` | 高德地图 |
+| 文件 | 引用方式 |
+|------|---------|
+| `WeatherService.kt` | `@GET("v2.6/${MyWeatherApplication.CaiYun_Key}/...")` |
+| `AmapService.kt` | `@GET("v5/place/text?key=${MyWeatherApplication.AMAP_KEY}")` |
+| `AmapService.kt` | `@GET("v3/geocode/regeo?key=${MyWeatherApplication.AMAP_KEY}")` |
+| `AmapService.kt` | `@GET("v3/config/district?key=${MyWeatherApplication.AMAP_KEY}")` |
+| `GoogleService.kt` | `@Query("key") key: String`，由调用方传入 `GOOGLE_KEY` |
 
 ### 申请地址
 
