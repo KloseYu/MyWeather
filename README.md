@@ -11,7 +11,7 @@
 | 城市搜索 | 高德 POI 文本搜索 + 区划接口：大陆走高德，港澳台及海外走 Google；「朝阳」「吉林」这类同名行政区全部并列展示 |
 | 一键定位 | 基于 GPS + 高德/Google 逆地理编码自动获取当前城市 |
 | 多城市管理 | 保存多个城市，在天气页左右滑动切换 |
-| 实时天气 | 温度、体感温度、风速、湿度、气压、能见度等 |
+| 实时天气 | 温度（摄氏/华氏）、天气描述、AQI、风速、湿度 |
 | 逐时预报 | 柱形 + 水波纹图表，横向滑动浏览 24 小时数据 |
 | 逐日预报 | 柱形 + 水波纹图表，展示每日最高/最低温区间 |
 | 生活指数 | 感冒、穿衣、实时紫外线、洗车 |
@@ -19,7 +19,7 @@
 | 左右滑动 | 天气界面左右滑动切换城市 |
 | 深色模式 | 自动适配系统深色/浅色主题 |
 | 华氏度支持 | 美国等华氏度国家自动同时显示摄氏与华氏温度 |
-| 数据缓存 | 网络请求失败时自动回退到上次缓存数据 |
+| 数据缓存 | 优先展示上次缓存数据，请求失败时保留缓存内容并提示 |
 
 ## 技术栈
 
@@ -36,7 +36,7 @@
 
 ```
 app/src/main/java/com/myweather/android/
-├── MainActivity.kt                    # 入口 Activity，判断是否有已保存城市
+├── MainActivity.kt                    # 入口 Activity，内嵌城市搜索 Fragment
 ├── MyWeatherApplication.kt            # 全局 Application，API Key 集中配置
 ├── logic/                             # ← 与 compose 分支大体共享，搜索链路各有实现
 │   ├── Repository.kt                  # 数据仓库单例
@@ -70,8 +70,8 @@ app/src/main/java/com/myweather/android/
             ├── NowLayout.kt           # 实时天气布局（手势识别）
             ├── NestedScrollView.kt    # 竖向滚动容器
             ├── NestedHorizontalScrollView.kt # 横向滚动容器
-            ├── HourlyChartView.kt     # 逐小时图表（柱形+水波纹）
-            └── DailyChartView.kt      # 逐日图表（柱形+水波纹）
+            ├── HourlyChartView.kt     # 24小时图表（柱形+水波纹）
+            └── DailyChartView.kt      # 7日图表（柱形+水波纹）
 ```
 
 ## 构建与运行
