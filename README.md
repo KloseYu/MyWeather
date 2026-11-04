@@ -82,10 +82,10 @@ app/src/main/java/com/myweather/android/
         ├── WeatherViewModel.kt      # 天气数据 ViewModel
         └── components/
             ├── NowSection.kt        # 实时天气区块
-            ├── HourlySection.kt     # 逐小时区块
-            ├── HourlyChart.kt       # 逐小时 Canvas 图表
-            ├── DailySection.kt      # 逐日区块
-            ├── DailyChart.kt        # 逐日 Canvas 图表
+            ├── HourlySection.kt     # 24小时区块
+            ├── HourlyChart.kt       # 24小时 Canvas 图表
+            ├── DailySection.kt      # 7日区块
+            ├── DailyChart.kt        # 7日 Canvas 图表
             └── LifeIndexSection.kt  # 生活指数区块
 ```
 

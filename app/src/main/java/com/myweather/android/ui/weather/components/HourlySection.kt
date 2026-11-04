@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.myweather.android.logic.model.HourlyResponse
 
 /**
- * 24 小时逐时预报区域，对应传统版本的 HourlyChartView + hourly.xml。
+ * 24 小时预报区域，对应传统版本的 HourlyChartView + hourly.xml。
  *
  * 以卡片形式包裹 [HourlyChart]，标题为"24小时预报"，图表可水平滚动。
  * 逐时数据在接口里是可为空的三段并行列表（温度、时间、天气代码），

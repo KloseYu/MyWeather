@@ -29,7 +29,7 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 /**
- * 24 小时逐时预报图表。
+ * 24 小时预报图表。
  *
  * 使用 [Canvas] 在原生画布上绘制，每个时间刻度包含：
  * - 圆角温度柱状图，带水波纹填充效果；

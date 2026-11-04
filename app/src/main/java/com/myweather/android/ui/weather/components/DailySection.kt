@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.myweather.android.logic.model.DailyResponse
 
 /**
- * 7 日逐日预报区域，对应传统版本的 DailyChartView + forecast.xml。
+ * 7 日预报区域，对应传统版本的 DailyChartView + forecast.xml。
  *
  * 以卡片形式包裹 [DailyChart]，标题为"7日预报"，图表可水平滚动。
  * 日间/夜间天气代码缺失时退化为通用 skycon，与 [DailyChart] 的兜底保持一致。

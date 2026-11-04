@@ -9,7 +9,7 @@ import android.content.Context
  * 在 AndroidManifest.xml 中通过 android:name 注册。
  *
  * API Key 配置说明：
- * - [CaiYun_Key]：彩云天气 API Key，需在 https://www.caiyunapp.com/h5/ 申请
+ * - [CaiYun_Key]：彩云天气 API Key，需在 https://www.caiyunapp.com 申请
  * - [AMAP_KEY]：高德逆地理编码 Key，需在 https://lbs.amap.com/ 申请
  * - [GOOGLE_KEY]：Google Geocoding API Key，需在 Google Cloud Console 申请
  */

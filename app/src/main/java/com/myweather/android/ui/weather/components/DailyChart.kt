@@ -30,7 +30,7 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 /**
- * 7 日逐日预报图表。
+ * 7 日预报图表。
  *
  * 使用 [Canvas] 在原生画布上绘制，每个日期刻度包含：
  * - 圆角温度范围柱状图（最高温到最低温），带水波纹填充效果；
