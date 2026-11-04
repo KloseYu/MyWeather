@@ -30,6 +30,17 @@ interface AmapReverseGeocodeService {
     ): AmapResponse
 }
 
+// 高德行政区划接口：按关键词一次取回全国所有同名行政区
+interface AmapDistrictService {
+
+    @GET("v3/config/district?key=${MyWeatherApplication.AMAP_KEY}")
+    suspend fun searchDistricts(
+        @Query("keywords") keywords: String,
+        @Query("subdistrict") subdistrict: Int,
+        @Query("extensions") extensions: String
+    ): AmapDistrictResponse
+}
+
 /**
  * 高德 API 通用响应。
  * regeocode 字段仅在逆地理编码响应中存在。
@@ -70,6 +81,7 @@ data class AmapPOI(
     val cityname: String?,
     val adname: String?,
     val address: String?,
+    val typecode: String?,
     @SerializedName("formatted_address") val formattedAddress: String?
 ) {
     private val coordinates: List<String>
@@ -81,26 +93,18 @@ data class AmapPOI(
     /**
      * 转为内部 Place 模型。
      *
-     * [usePoiName] 决定名称取哪个：
-     * - true：取 POI 名字，用于具体地点搜索结果。这类结果必须保留地点名，
-     *   因为同一区县里可能并存多个同类地点，只给行政区名就全都长一样，无法区分。
-     * - false：取行政区名（省 + 市 + 区/县），用于城市级、区县级这类"按行政区搜"的结果，
-     *   因为这类 POI 的名字是"鹿城区人民政府"之类的机构名，对用户没有意义。
+     * 名称一律取行政区名（省 + 市 + 区/县）：城市搜索的候选只能是行政区，
+     * 而这类 POI 的 name 是"鹿城区人民政府"之类的机构名，对用户没有意义。
      *
      * 地址一律只到行政区一级：天气预报按行政区发布，门牌号、街道对天气没有意义。
-     * 它同时也是具体地点的第二行说明，用户据此知道这个地点属于哪个区。
      */
-    fun toPlace(usePoiName: Boolean = false): Place {
+    fun toPlace(): Place {
         val provinceName = pname?.takeIf { it.isNotBlank() }
         val cityName = cityname?.takeIf { it.isNotBlank() }
         val districtName = adname?.takeIf { it.isNotBlank() }
         val poiName = name?.trim()?.takeIf { it.isNotEmpty() }
         val adminName = buildDisplayName(provinceName, cityName, districtName, poiName)
-        val displayName = when {
-            usePoiName && poiName != null -> poiName
-            adminName.isNotEmpty() -> adminName
-            else -> poiName.orEmpty()
-        }
+        val displayName = adminName.ifEmpty { poiName.orEmpty() }
 
         val rawAddress = address?.takeIf { it.isNotBlank() }
             ?: formattedAddress?.takeIf { it.isNotBlank() }
@@ -242,6 +246,24 @@ private fun isDomesticProvince(name: String?): Boolean =
     name?.trim() in DOMESTIC_PROVINCES
 
 /**
+ * 省级名称是否属于中国大陆。
+ *
+ * 高德只负责大陆：港澳台与海外一律交给 Google，避免用高德滞后的境外数据当候选。
+ * 判定只看省级名称，不看名称后缀——"台湾省"以"省"结尾但不是大陆省份，
+ * 海外的"东加里曼丹省""安大略省"同理。
+ * 省名为空时无法判定，按非大陆处理，宁可跳过该条也不展示归属不明的数据。
+ */
+fun isMainlandProvince(province: String?): Boolean {
+    val name = province?.trim().orEmpty()
+    if (name.isEmpty()) return false
+    if (isHmtRegion(name)) return false
+    return isDomesticProvince(name)
+}
+
+/** 一条高德搜索结果是否属于中国大陆，判定依据是它的省级字段 pname */
+fun AmapPOI.isMainlandPoi(): Boolean = isMainlandProvince(pname)
+
+/**
  * 高德搜索结果是否应交给 Google 处理（港澳台与海外）。
  *
  * 判定只用高德返回的省级字段 pname，不依赖查询文本：
@@ -296,17 +318,99 @@ private val ADMIN_SUFFIXES = listOf(
 )
 
 /** 去掉行政区后缀，得到用户可能输入的核心词；"温州市"与"温州"应视为同一个词 */
-private fun adminKey(name: String): String =
+fun adminKey(name: String): String =
     ADMIN_SUFFIXES
         .firstOrNull { name.endsWith(it) && name.length > it.length }
         ?.let { name.removeSuffix(it) }
         ?: name
 
 /**
+ * 区划条目对应的行政级别。
+ * 高德 district 接口的 level 只有 province / city / district 三种取值。
+ */
+enum class DistrictLevel { PROVINCE, CITY, DISTRICT }
+
+fun districtLevelOf(level: String?): DistrictLevel = when (level) {
+    "province" -> DistrictLevel.PROVINCE
+    "city" -> DistrictLevel.CITY
+    else -> DistrictLevel.DISTRICT
+}
+
+/**
+ * 该区划条目是否属于天气预报的范围。
+ *
+ * 区划接口的 level 除省、市、区县外还有 street（街道、镇），
+ * 天气按行政区发布，街道和镇没有独立的天气预报，不能作为候选展示。
+ *
+ * 判断只认 level 字段，不认名字里有没有"新区"：
+ * 浦东新区、滨海新区、两江新区是正式的市辖区，区划里 level=district，照常放行；
+ * 高新区、开发区、经开区只是经济功能区，不是行政区，区划里 level=street，
+ * 正好被这里挡住。靠后缀判断会把它们混成区级，所以不要改成按名字匹配。
+ */
+fun isWeatherAdminLevel(level: String?): Boolean =
+    level == "province" || level == "city" || level == "district"
+
+/**
+ * 由一条区划条目构造展示记录。
+ *
+ * 名称按区划自身的级别截取：省级只到省，市级到"省 + 市"，区县级到"省 + 市 + 区/县"。
+ * 不能一律取到区县——朝阳市的中心点落在双塔区，全取会拼成"辽宁省朝阳市双塔区"，
+ * 而用户搜的是朝阳市本身。
+ *
+ * 自身那一级一律取区划条目的名称，不用逆地理编码的对应字段：
+ * 区划条目是本次匹配的依据，逆地理编码的市级字段在省直辖县级市等情况下是占位名。
+ *
+ * 坐标用区划中心点，它就是该行政区的行政中心，
+ * 不会像文本搜索那样把首条结果落在飞地或郊区。
+ */
+fun districtToPlace(
+    district: AmapDistrict,
+    province: String?,
+    city: String?,
+    county: String?
+): Place? {
+    val center = district.center?.split(',') ?: return null
+    if (center.size < 2) return null
+    val lng = center[0].trim()
+    val lat = center[1].trim()
+    if (lng.isEmpty() || lat.isEmpty()) return null
+
+    val provinceName = adminLevel(province)?.removeSuffix("特别行政区")
+    val cityName = adminLevel(city)
+    val ownName = adminLevel(district.name)
+    val name = when (districtLevelOf(district.level)) {
+        DistrictLevel.PROVINCE -> provinceName ?: ownName.orEmpty()
+        DistrictLevel.CITY -> joinAdminLevels(listOfNotNull(provinceName, ownName ?: cityName))
+        DistrictLevel.DISTRICT ->
+            joinAdminLevels(listOfNotNull(provinceName, cityName, ownName ?: adminLevel(county)))
+    }
+    if (name.isEmpty()) return null
+    return Place(name, Location(lng, lat), name)
+}
+
+/**
  * 高德 POI 类型码：政府机构。
  * 只取政府类 POI，避免"温州市人民政府"命中同名的酒店、广场或小区。
  */
 const val GOVERNMENT_TYPES = "130100"
+
+/**
+ * 高德 POI 类型码：行政区划。
+ *
+ * 天气是按行政区发布的，所以搜索结果的候选范围只能是行政区，
+ * 商场、饭店、车站、桥梁这些 POI 即使名字里带城市名，也不是能查天气的地方。
+ *
+ * - 190102 省级（直辖市也归在这一级）
+ * - 190103 城市
+ * - 190104 市辖区、地级市
+ * - 190105 县级市、县
+ */
+
+/** 单条 POI 是否属于行政区划，判断依据是类型码而不是名字 */
+fun AmapPOI.isAdminDivision(): Boolean =
+    typecode?.split('|')?.any { it.trim() in ADMIN_TYPECODES } == true
+
+private val ADMIN_TYPECODES = setOf("190102", "190103", "190104", "190105")
 
 /**
  * 搜索收敛结果。
@@ -324,86 +428,129 @@ data class CollapsedSearch(
 )
 
 /**
- * 按用户输入的粒度收敛搜索结果。
+ * 按输入收敛搜索结果，同名行政区并列保留。
  *
  * 高德文本搜索对"温州"这类城市名会返回十几条区县、街道级 POI，
  * 让用户在一堆鹿城区、瓯海区里挑一个，这不是搜城市该有的体验。
  * 因此这里按输入本身的粒度收敛：
- * - 输入是城市名 → 只留一条城市级记录，并给出市政府校准线索
- * - 输入是区县名 → 只留一条区县级记录
+ * - 输入是城市名 → 只留城市级记录，并给出市政府校准线索
+ * - 输入是区县名 → 只留区县级记录
  * - 输入是具体地点（如"温州南站"）→ 不收敛，保持 POI 原貌
  *
- * 名称与地址刻意保持不同粒度：名称是用户搜索的粒度（城市），
- * 地址是这个坐标真正所属的行政区（区县）。天气按区县发布，
- * 天气页标题显示地址，侧边栏灰色行也显示地址，两边同源同值；
- * 而侧边栏上方显示名称，用户看到的仍是自己搜的那个城市。
+ * 但同名的地方必须一条不漏地并列出来。吉林既是省名也是市名，
+ * 朝阳既是辽宁的市、也是北京的区、还是长春的区，这类同名行政区
+ * 在全国有很多。收敛成一条就等于替用户做了选择，而他真正要的那个
+ * 往往就被这一下吞掉了，所以同名的每一条都要保留，
+ * 并靠省名把它与其他同名地方区分开。
+ *
+ * 名称与地址保持同值：天气页标题显示地址，侧边栏灰色行也显示地址，
+ * 两边同源同值；侧边栏上方显示名称，用户看到的仍是自己搜的那个地方。
  */
 fun collapseByQueryGranularity(query: String, pois: List<AmapPOI>): CollapsedSearch {
     val raw = query.trim()
-    if (raw.isEmpty()) return CollapsedSearch(toSpecificPlaces(pois))
+    if (raw.isEmpty()) return CollapsedSearch(emptyList())
     val key = adminKey(raw)
 
-    fun cityMatch(): AmapPOI? = pois.firstOrNull { poi ->
-        poi.cityname?.trim()?.let { adminKey(it) } == key
+    // 与输入同名的行政区全部留下，按完整层级去重
+    val sameName = pois.filter { it.matchesAdminKey(key) }
+        .distinctBy { fullAdminNameOf(it) }
+
+    if (sameName.isEmpty()) {
+        // 省名本身不是 POI：搜"海南"高德只返回三亚市和它的几个区，
+        // 但它们的省级字段都写着"海南省"，据此把结果收回到省
+        val provinceName = pois.mapNotNull { adminLevel(it.pname) }.distinct().singleOrNull()
+        if (provinceName != null && adminKey(provinceName) == key) {
+            val name = provinceName.removeSuffix("特别行政区")
+            return CollapsedSearch(
+                places = listOf(Place(name, Location(pois.first().lng, pois.first().lat), name)),
+                cityAnchorQuery = "${provinceName}人民政府"
+            )
+        }
+        // 命中的都不是与输入同名的行政区，说明用户搜的是具体地点（车站、商场、小区）。
+        // 天气按行政区发布，这类地点本身不是天气预报的范围，不能作为候选展示，
+        // 所以直接判定为没有结果，而不是拿它们所属的区县凑数。
+        return CollapsedSearch(emptyList())
     }
 
-    fun districtMatch(): AmapPOI? = pois.firstOrNull { poi ->
-        val district = poi.adname?.trim() ?: return@firstOrNull false
-        adminKey(district) == key
-    }
-
-    // 输入自带区/县后缀时优先按区县收敛。
-    // 否则"朝阳区"会被同名的地级市"朝阳市"抢先命中，用户明明输的是区却得到另一个省的市。
-    val preferDistrict = raw.endsWith("区") || raw.endsWith("县")
-    val districtHit = districtMatch()
-    if (preferDistrict && districtHit != null) return CollapsedSearch(listOf(districtHit.toPlace()))
-
-    val cityHit = cityMatch()
-    if (cityHit != null) {
-        // 市级名用于限定市政府搜索范围，避免"朝阳市人民政府"命中别处的同名机构
-        val cityPart = cityPartOf(cityHit)
+    // 只有一条同名结果时才做市政府校准。
+    // 多条并列时每条代表不同城市，统一锚到一个点会把它们全挪到同一个地方
+    if (sameName.size == 1) {
+        val only = sameName.first()
+        val place = adminPlaceOf(only)
+        // 县级记录（区、县、县级市）的坐标本身就是区县政府位置，不需要再校准。
+        // 拿所属地级市的市政府去锚，会把凌源市、朝阳县这类地方挪到地级市中心
+        if (only.selfAdminLevel() == AdminLevel.COUNTY) {
+            return CollapsedSearch(places = listOf(place))
+        }
+        val cityPart = cityPartOf(only)
         return CollapsedSearch(
-            places = listOf(buildCityLevelPlace(cityHit)),
+            places = listOf(place),
             cityAnchorQuery = cityPart?.let { "${it}人民政府" },
             anchorRegion = cityPart.orEmpty()
         )
     }
 
-    if (districtHit != null) {
-        // 县级市也是"市"：乐清、余姚这类挂在 adname 里，不会命中上面的 cityMatch。
-        // 地级市比县级市大，所以名称必须保留完整层级（省 + 地级市 + 县级市），
-        // 否则别处的同名县级市无法区分；坐标同样锚到县级市自己的市政府，
-        // 让"搜乐清"落在乐清城区，而不是高德返回的第一条随机 POI。
-        if (isCountyLevelCity(districtHit)) {
-            return CollapsedSearch(
-                places = listOf(buildCountyLevelCityPlace(districtHit)),
-                cityAnchorQuery = adminLevel(districtHit.adname)?.let { "${it}人民政府" },
-                anchorRegion = adminLevel(districtHit.cityname).orEmpty()
-            )
-        }
-        return CollapsedSearch(listOf(districtHit.toPlace()))
-    }
-
-    // 输入是具体地点：天气只到行政区，所以按行政区收敛，同区多条只留一条
-    return CollapsedSearch(toSpecificPlaces(pois))
+    return CollapsedSearch(sameName.map { adminPlaceOf(it) })
 }
 
 /**
- * 具体地点搜索结果转换。
+ * 这条记录是否与输入同名。
  *
- * 关键前提：天气是按行政区发布的，同一个区里的两个地点拿到的是完全相同的天气。
- * 所以"温州南站"和"温州汽车南站"即使相距很远、街道都不同，只要同属一个区，
- * 对天气应用就是同一条信息——把它们并列成两行，只会让用户以为要挑哪个才对。
+ * 只看记录自身的名称。省市县三级字段都不能用：
+ * - "凌源市"的 cityname 写着"朝阳市"，用 cityname 判断会把朝阳市下辖的每个县市
+ *   都当成"朝阳"的同名结果，用户搜朝阳就会看到一堆自己不认识的县
+ * - "吉林省"的 cityname 写着"长春市"，用 cityname 判断又会把省名整条漏掉
  *
- * 因此这里按行政区收敛：每个区只保留一条，取高德排序最靠前的那个地点。
- * 结果列表里每一行对应一个互不相同的天气预报范围，行与行之间不会重复。
- *
- * 第一行保留 POI 原名，用户能认出自己搜的是哪个地方；
- * 第二行是所属行政区，与天气页标题、侧边栏灰色行同源同值。
+ * 高德返回的行政区 POI，名称就是它自己的行政区名（"吉林省""朝阳区""朝阳市"），
+ * 所以拿名称去掉后缀与输入比对，既不会漏也不会多。
  */
-private fun toSpecificPlaces(pois: List<AmapPOI>): List<Place> =
-    pois.map { it.toPlace(usePoiName = true) }
-        .distinctBy { it.address.ifEmpty { it.name } }
+private fun AmapPOI.matchesAdminKey(key: String): Boolean =
+    adminKey(adminLevel(name).orEmpty()) == key
+
+/** 记录自身所处的行政层级，决定按哪一级拼接展示名 */
+private enum class AdminLevel { PROVINCE, CITY, COUNTY }
+
+/**
+ * 判断这条记录自己属于哪一级。
+ *
+ * 判据是"记录自身的名称出现在哪一级字段里"，而不是"名称是否以市结尾"。
+ * 县、县级市、市辖区在行政区划上就是同一级，只是叫法不同：
+ * 凌源市、朝阳县、朝阳区都属县级。若按后缀判断，凌源市会被当成地级市，
+ * 拼出"辽宁省朝阳市"，既吞掉了它所属的地级市，也让它和朝阳县撞成同一个名字。
+ *
+ * 按由粗到细的顺序匹配：省级字段、市级字段、区县字段。
+ * 直辖市（北京市）的省级字段就是它自己，因此归到省级，展示为"北京市"。
+ */
+private fun AmapPOI.selfAdminLevel(): AdminLevel {
+    val self = adminLevel(name)
+    if (self != null) {
+        if (adminLevel(pname) == self) return AdminLevel.PROVINCE
+        if (adminLevel(cityname) == self) return AdminLevel.CITY
+        if (adminLevel(adname) == self) return AdminLevel.COUNTY
+    }
+    // 字段对不上时退回类型码，只用来兜底识别省级，其余一律按县级
+    return if (typecode?.split('|')?.any { it.trim() == "190102" } == true) {
+        AdminLevel.PROVINCE
+    } else {
+        AdminLevel.COUNTY
+    }
+}
+
+/**
+ * 由一条行政区 POI 构造记录，名称一律带完整层级。
+ *
+ * 同名行政区只能靠省名区分：北京的朝阳区和长春的朝阳区都叫"朝阳区"，
+ * 写成"北京市朝阳区"和"吉林省长春市朝阳区"才能让用户分清。
+ */
+private fun adminPlaceOf(poi: AmapPOI): Place = when (poi.selfAdminLevel()) {
+    AdminLevel.PROVINCE -> {
+        val name = adminLevel(poi.pname)?.removeSuffix("特别行政区")
+            ?: adminLevel(poi.name).orEmpty()
+        Place(name, Location(poi.lng, poi.lat), name)
+    }
+    AdminLevel.CITY -> buildCityLevelPlace(poi)
+    AdminLevel.COUNTY -> buildCountyLevelCityPlace(poi)
+}
 
 /** 取市级名称：省直辖县级市的 cityname 是占位名，已被过滤，此时退到区县或 POI 名 */
 private fun cityPartOf(poi: AmapPOI): String? =
@@ -430,25 +577,19 @@ fun buildCityLevelPlace(poi: AmapPOI): Place {
 }
 
 /**
- * 县级市判定。
+ * 由一条区县 / 县级市 POI 构造记录。
  *
- * 地级市放在 cityname 里，县级市（乐清市、余姚市）放在 adname 里，
- * 两者都以"市"结尾，只能靠字段位置区分，不能靠名称后缀。
- */
-fun isCountyLevelCity(poi: AmapPOI): Boolean =
-    adminLevel(poi.adname)?.endsWith("市") == true
-
-/**
- * 由一条县级市 POI 构造记录。
- *
- * 名称与地址都取完整层级：省 + 地级市 + 县级市。
- * 地级市比县级市大，少了中间这一级，不同地级市下的同名县级市就无法区分，
+ * 名称与地址都取完整层级：省 + 地级市 + 区县。
+ * 同名区县靠省名区分（北京市朝阳区 / 吉林省长春市朝阳区），
+ * 县级市也要保留中间的地级市，否则不同地级市下的同名县级市无法区分，
  * 也会丢掉用户熟悉的"省市区县"读法。
  */
 fun buildCountyLevelCityPlace(poi: AmapPOI): Place {
     val province = adminLevel(poi.pname)?.removeSuffix("特别行政区")
     val city = adminLevel(poi.cityname)
-    val county = adminLevel(poi.adname)
+    // 区县名取不到时退回 POI 名：县级市记录偶尔不给 adname，
+    // 而它的 name 就是"凌源市"，漏掉这一级就只剩"辽宁省朝阳市"，看不出是哪个县级市
+    val county = adminLevel(poi.adname) ?: adminLevel(poi.name)
     val name = joinAdminLevels(listOfNotNull(province, city, county))
         .ifEmpty { poi.name?.trim().orEmpty() }
     return Place(name, Location(poi.lng, poi.lat), name)

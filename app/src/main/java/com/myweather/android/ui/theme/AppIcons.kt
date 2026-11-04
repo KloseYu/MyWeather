@@ -1,4 +1,4 @@
-﻿package com.myweather.android.ui.compose
+package com.myweather.android.ui.theme
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
@@ -52,6 +52,7 @@ val HomeIcon: ImageVector by lazy {
     }.build()
 }
 
+/** 添加城市图标，白色十字形状，用于天气界面右上角打开侧边栏。 */
 val AddCityIcon: ImageVector by lazy {
     ImageVector.Builder(
         name = "AddCity",
@@ -86,6 +87,7 @@ val AddCityIcon: ImageVector by lazy {
     }.build()
 }
 
+/** 定位图标，白色准星形状，用于侧边栏定位按钮。 */
 val LocateIcon: ImageVector by lazy {
     ImageVector.Builder(
         name = "Locate",

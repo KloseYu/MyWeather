@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.myweather.android.ui.compose.MainNavigation
+import com.myweather.android.ui.navigation.MainNavigation
 import com.myweather.android.ui.theme.MyWeatherTheme
 
 /**

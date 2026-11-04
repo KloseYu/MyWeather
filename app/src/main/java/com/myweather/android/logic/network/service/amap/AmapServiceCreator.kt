@@ -18,4 +18,8 @@ object AmapServiceCreator {
     fun createReverseGeocodeService(): AmapReverseGeocodeService {
         return retrofit.create(AmapReverseGeocodeService::class.java)
     }
+
+    fun createDistrictService(): AmapDistrictService {
+        return retrofit.create(AmapDistrictService::class.java)
+    }
 }

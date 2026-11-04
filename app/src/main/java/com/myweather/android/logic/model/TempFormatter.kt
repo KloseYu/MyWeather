@@ -34,3 +34,9 @@ fun formatFahrenheit(celsius: Double): String {
 fun formatTemp(celsius: Double, useFahrenheit: Boolean): String {
     return if (useFahrenheit) formatFahrenheit(celsius) else formatCelsius(celsius)
 }
+
+// 图表内温度标签：只保留整数与度数符号，不带温度单位，避免柱体上方文字过宽
+fun formatChartTemp(celsius: Double, useFahrenheit: Boolean): String {
+    val value = if (useFahrenheit) celsius * 9.0 / 5.0 + 32.0 else celsius
+    return "${"%.0f".format(value)}°"
+}
