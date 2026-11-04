@@ -2,13 +2,13 @@
 
 一款基于 **彩云天气 API** 的 Android 天气应用，使用 **Kotlin + Jetpack Compose** 构建，支持全球城市搜索、实时定位、逐时/逐日预报、生活指数展示，以及深色模式。
 
-> 本项目为 `compose` 分支，采用 Jetpack Compose 完全重写 UI 层，替代了 `main` 分支中基于 View + ViewPager2 的传统实现。两个分支共享相同的 `logic` 层（ViewModel / Repository / Model / Network），仅 UI 层实现不同。
+> 本项目为 `compose` 分支，采用 Jetpack Compose 完全重写 UI 层，替代了 `main` 分支中基于 View + ViewPager2 的传统实现。两个分支的 `logic` 层大部分共享（model / dao / service 接口一致），搜索链路与数据仓库各自实现，UI 层实现不同。
 
 ## 功能特性
 
 | 功能 | 说明 |
 |------|------|
-| 城市搜索 | 支持全球城市关键词搜索，结果实时展示 |
+| 城市搜索 | 高德 POI 文本搜索 + 区划接口：大陆走高德，港澳台及海外走 Google；「朝阳」「吉林」这类同名行政区全部并列展示 |
 | 一键定位 | 基于 GPS + 高德/Google 逆地理编码自动获取当前城市 |
 | 多城市管理 | 侧边栏管理已保存城市，支持增删和切换 |
 | 实时天气 | 温度、天气描述、AQI（中国/海外双标准）、风速、湿度 |
@@ -25,7 +25,7 @@
 
 - **UI 框架**: Jetpack Compose + Material Design 3
 - **架构**: MVVM（ViewModel + LiveData + Repository）
-- **网络**: Retrofit 2 + Gson
+- **网络**: Retrofit 3.0 + Gson
 - **异步**: Kotlin Coroutines + Flow
 - **定位**: Android LocationManager + 高德/Google 逆地理编码
 - **天气数据**: 彩云天气 API（realtime / daily / hourly）
@@ -39,10 +39,12 @@
 app/src/main/java/com/myweather/android/
 ├── MainActivity.kt                  # Compose 入口 Activity
 ├── MyWeatherApplication.kt          # 全局 Application，API Key 集中配置
-├── logic/                           # ← 与 main 分支共享，无差异
+├── logic/                           # ← 与 main 分支大体共享，搜索链路各有实现
 │   ├── Repository.kt                # 数据仓库，封装网络 + 本地存储
 │   ├── dao/
 │   │   └── PlaceDao.kt              # SharedPreferences 城市持久化
+│   ├── location/
+│   │   └── LocationClient.kt        # 定位客户端（本分支独有）
 │   ├── model/
 │   │   ├── Weather.kt               # 聚合天气数据 + AQI 工具方法
 │   │   ├── Sky.kt                   # 天气代码 → 图标/背景映射
@@ -55,26 +57,39 @@ app/src/main/java/com/myweather/android/
 │       ├── MyWeatherNetWork.kt      # 统一网络访问入口
 │       └── service/
 │           ├── caiyun/              # 彩云天气 Retrofit Service
-│           ├── amap/                # 高德逆地理编码 Service
+│           ├── amap/                # 高德文本搜索 / 逆地理编码 / 行政区划 Service
 │           └── google/              # Google 逆地理编码 Service
 └── ui/
-    ├── compose/                     # ← compose 分支新增，替代 weather/ 下的 View 实现
-    │   ├── MainNavigation.kt        # 主导航（ModalNavigationDrawer 侧边栏 + 天气内容）
+    ├── navigation/
+    │   └── MainNavigation.kt        # 主导航（ModalNavigationDrawer 侧边栏 + 天气内容）
+    ├── place/
     │   ├── PlaceScreen.kt           # 城市搜索/管理界面（对应 PlaceFragment）
-    │   ├── WeatherScreen.kt         # 天气详情界面（对应 WeatherPageFragment，含 Canvas 图表）
-    │   └── WeatherIcons.kt          # 自定义矢量图标（Home / AddCity / Locate / Delete）
+    │   ├── PlaceUiState.kt          # 城市搜索界面状态
+    │   ├── PlaceViewModel.kt        # 城市搜索 ViewModel
+    │   └── components/
+    │       ├── PlaceItem.kt         # 搜索结果条目
+    │       └── SavedPlaceItem.kt    # 已保存城市条目
     ├── theme/
+    │   ├── AppIcons.kt              # 自定义矢量图标（Home / AddCity / Locate / Delete）
+    │   ├── ChartPalette.kt          # 图表配色
     │   ├── Color.kt                 # 配色常量（浅色/深色成对定义）
+    │   ├── PlacePalette.kt          # 城市列表配色
     │   ├── Theme.kt                 # Material3 主题定义
     │   └── Type.kt                  # 排版规范
-    ├── place/
-    │   └── PlaceViewModel.kt        # 城市搜索 ViewModel
     └── weather/
+        ├── WeatherScreen.kt         # 天气详情界面（对应 WeatherPageFragment，含 Canvas 图表）
+        ├── WeatherUiState.kt        # 天气界面状态
         ├── WeatherViewModel.kt      # 天气数据 ViewModel
-        ├── WeatherActivity.kt       # 传统版本 Activity（main 分支使用）
-        ├── WeatherPageFragment.kt   # 传统版本 Fragment（main 分支使用）
-        └── view/                    # 传统版本自定义 View（DailyChartView 等）
+        └── components/
+            ├── NowSection.kt        # 实时天气区块
+            ├── HourlySection.kt     # 逐小时区块
+            ├── HourlyChart.kt       # 逐小时 Canvas 图表
+            ├── DailySection.kt      # 逐日区块
+            ├── DailyChart.kt        # 逐日 Canvas 图表
+            └── LifeIndexSection.kt  # 生活指数区块
 ```
+
+> 传统版本（`main` 分支）的 `WeatherActivity.kt`、`WeatherPageFragment.kt`、`ui/weather/view/`（DailyChartView 等）在本分支不存在。
 
 ## compose 分支与 main 分支的差异
 
@@ -127,10 +142,13 @@ companion object {
 
 同时需要将对应 Key 填入以下位置（保持一致）：
 
-| 文件 | 常量 | 对应 Key |
-|------|------|---------|
-| `WeatherService.kt` → `CaiYunToken.token` | `"YOUR_CAIYUN_KEY"` | 彩云天气 |
-| `AmapService.kt` → `AmapApiKey.KEY` | `"YOUR_AMAP_KEY"` | 高德地图 |
+| 文件 | 引用方式 |
+|------|---------|
+| `WeatherService.kt` | `@GET("v2.6/${MyWeatherApplication.CaiYun_Key}/...")` |
+| `AmapService.kt` | `@GET("v5/place/text?key=${MyWeatherApplication.AMAP_KEY}")` |
+| `AmapService.kt` | `@GET("v3/geocode/regeo?key=${MyWeatherApplication.AMAP_KEY}")` |
+| `AmapService.kt` | `@GET("v3/config/district?key=${MyWeatherApplication.AMAP_KEY}")` |
+| `GoogleService.kt` | `@Query("key") key: String`，由调用方传入 `GOOGLE_KEY` |
 
 ### 申请地址
 
