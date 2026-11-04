@@ -30,6 +30,17 @@ interface AmapReverseGeocodeService {
     ): AmapResponse
 }
 
+// 高德行政区划接口：按关键词一次取回全国所有同名行政区
+interface AmapDistrictService {
+
+    @GET("v3/config/district?key=${MyWeatherApplication.AMAP_KEY}")
+    suspend fun searchDistricts(
+        @Query("keywords") keywords: String,
+        @Query("subdistrict") subdistrict: Int,
+        @Query("extensions") extensions: String
+    ): AmapDistrictResponse
+}
+
 /**
  * 高德 API 通用响应。
  * regeocode 字段仅在逆地理编码响应中存在。
@@ -242,6 +253,21 @@ private fun isDomesticProvince(name: String?): Boolean =
     name?.trim() in DOMESTIC_PROVINCES
 
 /**
+ * 省级名称是否属于中国大陆。
+ *
+ * 高德只负责大陆：港澳台与海外一律交给 Google，避免用高德滞后的境外数据当候选。
+ * 判定只看省级名称，不看名称后缀——"台湾省"以"省"结尾但不是大陆省份，
+ * 海外的"东加里曼丹省""安大略省"同理。
+ * 省名为空时无法判定，按非大陆处理，宁可跳过该条也不展示归属不明的数据。
+ */
+fun isMainlandProvince(province: String?): Boolean {
+    val name = province?.trim().orEmpty()
+    if (name.isEmpty()) return false
+    if (isHmtRegion(name)) return false
+    return isDomesticProvince(name)
+}
+
+/**
  * 高德搜索结果是否应交给 Google 处理（港澳台与海外）。
  *
  * 判定只用高德返回的省级字段 pname，不依赖查询文本：
@@ -296,11 +322,75 @@ private val ADMIN_SUFFIXES = listOf(
 )
 
 /** 去掉行政区后缀，得到用户可能输入的核心词；"温州市"与"温州"应视为同一个词 */
-private fun adminKey(name: String): String =
+fun adminKey(name: String): String =
     ADMIN_SUFFIXES
         .firstOrNull { name.endsWith(it) && name.length > it.length }
         ?.let { name.removeSuffix(it) }
         ?: name
+
+/**
+ * 区划条目对应的行政级别。
+ * 高德 district 接口的 level 只有 province / city / district 三种取值。
+ */
+enum class DistrictLevel { PROVINCE, CITY, DISTRICT }
+
+fun districtLevelOf(level: String?): DistrictLevel = when (level) {
+    "province" -> DistrictLevel.PROVINCE
+    "city" -> DistrictLevel.CITY
+    else -> DistrictLevel.DISTRICT
+}
+
+/**
+ * 该区划条目是否属于天气预报的范围。
+ *
+ * 区划接口的 level 除省、市、区县外还有 street（街道、镇），
+ * 天气按行政区发布，街道和镇没有独立的天气预报，不能作为候选展示。
+ *
+ * 判断只认 level 字段，不认名字里有没有"新区"：
+ * 浦东新区、滨海新区、两江新区是正式的市辖区，区划里 level=district，照常放行；
+ * 高新区、开发区、经开区只是经济功能区，不是行政区，区划里 level=street，
+ * 正好被这里挡住。靠后缀判断会把它们混成区级，所以不要改成按名字匹配。
+ */
+fun isWeatherAdminLevel(level: String?): Boolean =
+    level == "province" || level == "city" || level == "district"
+
+/**
+ * 由一条区划条目构造展示记录。
+ *
+ * 名称按区划自身的级别截取：省级只到省，市级到"省 + 市"，区县级到"省 + 市 + 区/县"。
+ * 不能一律取到区县——朝阳市的中心点落在双塔区，全取会拼成"辽宁省朝阳市双塔区"，
+ * 而用户搜的是朝阳市本身。
+ *
+ * 自身那一级一律取区划条目的名称，不用逆地理编码的对应字段：
+ * 区划条目是本次匹配的依据，逆地理编码的市级字段在省直辖县级市等情况下是占位名。
+ *
+ * 坐标用区划中心点，它就是该行政区的行政中心，
+ * 不会像文本搜索那样把首条结果落在飞地或郊区。
+ */
+fun districtToPlace(
+    district: AmapDistrict,
+    province: String?,
+    city: String?,
+    county: String?
+): Place? {
+    val center = district.center?.split(',') ?: return null
+    if (center.size < 2) return null
+    val lng = center[0].trim()
+    val lat = center[1].trim()
+    if (lng.isEmpty() || lat.isEmpty()) return null
+
+    val provinceName = adminLevel(province)?.removeSuffix("特别行政区")
+    val cityName = adminLevel(city)
+    val ownName = adminLevel(district.name)
+    val name = when (districtLevelOf(district.level)) {
+        DistrictLevel.PROVINCE -> provinceName ?: ownName.orEmpty()
+        DistrictLevel.CITY -> joinAdminLevels(listOfNotNull(provinceName, ownName ?: cityName))
+        DistrictLevel.DISTRICT ->
+            joinAdminLevels(listOfNotNull(provinceName, cityName, ownName ?: adminLevel(county)))
+    }
+    if (name.isEmpty()) return null
+    return Place(name, Location(lng, lat), name)
+}
 
 /**
  * 高德 POI 类型码：政府机构。
@@ -382,6 +472,17 @@ fun collapseByQueryGranularity(query: String, pois: List<AmapPOI>): CollapsedSea
             )
         }
         return CollapsedSearch(listOf(districtHit.toPlace()))
+    }
+
+    // 省名本身不是 POI：搜"海南"高德只返回三亚市和它的几个区，
+    // 但它们的省级字段都写着"海南省"，据此把结果收回到省
+    val provinceName = pois.mapNotNull { adminLevel(it.pname) }.distinct().singleOrNull()
+    if (provinceName != null && adminKey(provinceName) == key) {
+        val name = provinceName.removeSuffix("特别行政区")
+        return CollapsedSearch(
+            places = listOf(Place(name, Location(pois.first().lng, pois.first().lat), name)),
+            cityAnchorQuery = "${provinceName}人民政府"
+        )
     }
 
     // 输入是具体地点：天气只到行政区，所以按行政区收敛，同区多条只留一条

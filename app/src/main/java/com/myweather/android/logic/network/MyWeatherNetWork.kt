@@ -2,12 +2,19 @@ package com.myweather.android.logic.network
 
 import com.myweather.android.MyWeatherApplication
 import com.myweather.android.logic.model.*
+import com.myweather.android.logic.network.service.amap.AmapDistrict
+import com.myweather.android.logic.network.service.amap.AmapPOI
 import com.myweather.android.logic.network.service.amap.AmapServiceCreator
 import com.myweather.android.logic.network.service.amap.CollapsedSearch
 import com.myweather.android.logic.network.service.amap.GOVERNMENT_TYPES
+import com.myweather.android.logic.network.service.amap.adminKey
 import com.myweather.android.logic.network.service.amap.collapseByQueryGranularity
+import com.myweather.android.logic.network.service.amap.districtLevelOf
+import com.myweather.android.logic.network.service.amap.districtToPlace
 import com.myweather.android.logic.network.service.amap.fullAdminNameOf
 import com.myweather.android.logic.network.service.amap.isHmtRegion
+import com.myweather.android.logic.network.service.amap.isMainlandProvince
+import com.myweather.android.logic.network.service.amap.isWeatherAdminLevel
 import com.myweather.android.logic.network.service.amap.shouldUseGoogle
 import com.myweather.android.logic.network.service.amap.toPlace
 import com.myweather.android.logic.network.service.caiyun.WeatherService
@@ -16,6 +23,7 @@ import com.myweather.android.logic.network.service.google.GoogleService
 import com.myweather.android.logic.network.service.google.GoogleServiceCreator
 import com.myweather.android.logic.network.service.google.toPlace as googleResultToPlace
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
@@ -29,8 +37,18 @@ object MyWeatherNetWork {
     // 高德城市搜索接口
     private val amapTextSearchService = AmapServiceCreator.createTextSearchService()
 
+    /** 行政区名后缀，用来判断输入是否已经自带级别（"朝阳区"不必再展开） */
+    private val ADMIN_SUFFIX_HINTS =
+        listOf("自治区", "自治州", "特别行政区", "省", "市", "区", "县", "盟", "旗")
+
+    /** 同名候选逐个补全省市名时的间隔，避免连续请求触发高德的 QPS 限流 */
+    private const val SEARCH_GAP_MS = 400L
+
     // 高德逆地理编码接口
     private val amapReverseGeocodeService = AmapServiceCreator.createReverseGeocodeService()
+
+    // 高德行政区划接口（同名行政区补全）
+    private val amapDistrictService = AmapServiceCreator.createDistrictService()
 
     // Google 地理编码接口（海外兜底）
     private val googleService = GoogleServiceCreator.create<GoogleService>()
@@ -65,8 +83,10 @@ object MyWeatherNetWork {
         try {
             val amapResult = amapTextSearchService.searchCities(query, "", "", 10, 1)
             if (amapResult.status == "1" && amapResult.pois.isNotEmpty()) {
-                // 按输入粒度收敛：搜城市名只给一条城市级结果，不把区县铺给用户挑
-                amapPlaces = anchorToCityCenter(collapseByQueryGranularity(query, amapResult.pois))
+                // 按输入粒度收敛，并把同名行政区全部并列：
+                // 搜城市名只给城市级结果，不把区县铺给用户挑；
+                // 但"朝阳""吉林"这类一名多指的地方，同名的每一条都不能少
+                amapPlaces = resolveAdminSearch(query, amapResult.pois)
                 // 归属判定要在收敛前做：收敛后的名称已改写成展示格式，
                 // 原始 pname 才是判断"这条记录属于哪个国家"的依据
                 overseas = shouldUseGoogle(amapResult.pois)
@@ -124,6 +144,112 @@ object MyWeatherNetWork {
         }
         return listOf(original.copy(location = Location(anchorPoi.lng, anchorPoi.lat)))
     }
+
+    /**
+     * 输入是否是一个"裸地名"：不带行政后缀的短词。
+     * 这类词最容易一名多指（吉林、朝阳），也是唯一值得补搜的输入形态；
+     * "朝阳区"这种自带后缀的输入已经足够精确，不必再展开。
+     */
+    private fun isBarePlaceName(query: String): Boolean =
+        query.length in 2..4 && ADMIN_SUFFIX_HINTS.none { query.endsWith(it) }
+
+    private fun needsSameNameExpansion(query: String): Boolean = isBarePlaceName(query)
+
+    /**
+     * 搜索结果的最终解析：收敛 + 同名补全。
+     *
+     * 裸地名（吉林、朝阳）交给 [expandSameNameByDistrict] 取回全国所有同名行政区，
+     * 再与文本搜索的收敛结果合并去重。两套来源各有覆盖盲区：
+     * 文本搜索按相关度排序，同名的省市县往往只回一部分；
+     * 区划接口按行政区划索引，偶尔会漏掉个别条目。合并后一条不漏。
+     *
+     * 合并结果直接用区划中心点做坐标，不再查市政府：
+     * 多条并列时每条代表不同城市，统一锚到一个点会把它们全挪到同一个地方。
+     *
+     * 没有同名冲突（只有一个候选）时仍走原来的收敛 + 市政府校准，行为保持不变。
+     */
+    private suspend fun resolveAdminSearch(query: String, pois: List<AmapPOI>): List<Place> {
+        val collapsed = collapseByQueryGranularity(query, pois)
+        if (!needsSameNameExpansion(query)) return anchorToCityCenter(collapsed)
+        val expanded = expandSameNameByDistrict(query)
+        if (expanded.isEmpty()) return anchorToCityCenter(collapsed)
+        return (expanded + collapsed.places).distinctBy { it.name }
+    }
+
+    /**
+     * 同名行政区补全，返回可并列展示的完整记录。
+     *
+     * 高德文本搜索把同一关键词的行政区压在一页里，同名的地方往往只回一部分：
+     * 搜"朝阳"只出辽宁的朝阳市和朝阳县，北京的朝阳区、长春的朝阳区都拿不到；
+     * 搜"吉林"只出吉林省，吉林市被省会挤掉。
+     * 靠加后缀补搜也不可靠——"朝阳区"不带地域参数只回北京那一个。
+     *
+     * 行政区划接口能一次给出全国所有同名行政区（带 adcode、level 和中心点），
+     * 再逐个逆地理编码补上省、市名，就能拼出彼此可区分的完整名称。
+     *
+     * 只有真的存在同名冲突（候选 ≥ 2）才走这条路；
+     * 只有一个候选时仍用文本搜索 + 市政府校准，行为与之前保持一致。
+     * 区划接口取不到同名结果（海外地名、具体地点名）时返回空，由调用方兜底。
+     */
+    private suspend fun expandSameNameByDistrict(query: String): List<Place> {
+        val sameName = sameNameDistricts(query)
+        if (sameName.size < 2) return emptyList()
+        return districtsToPlaces(sameName)
+    }
+
+    /** 区划接口里与该输入核心词同名的行政区；接口异常或没有同名结果时返回空 */
+    private suspend fun sameNameDistricts(query: String): List<AmapDistrict> = try {
+        val response = amapDistrictService.searchDistricts(query, 0, "base")
+        if (response.status == "1") {
+            val key = adminKey(query)
+            response.districts.orEmpty().filter { adminKey(it.name.orEmpty()) == key }
+        } else {
+            emptyList()
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        emptyList()
+    }
+
+    /**
+     * 把区划条目转成可展示记录。
+     *
+     * 只保留省、市、区县三级：街道与镇没有独立的天气预报，不能作为候选。
+     * 由粗到细排列，用户先看到覆盖面大的那个。
+     * 每条都要按中心点逆地理编码补全省、市名，否则"朝阳区"这类名字无法区分。
+     *
+     * 去重按 adcode，不按名称。adcode 是行政区划的唯一编号，
+     * 而同名候选的展示名称依赖逆地理编码的结果——万一某条逆地理编码失败，
+     * 它的名称会退化成只剩"朝阳区"，按名称去重就会把另一条真候选误删。
+     * 按 adcode 去重能保证区划接口给出的每一条都如实并列展示。
+     *
+     * 只保留中国大陆的条目：港澳台与海外交给 Google，不用高德的滞后数据凑候选。
+     * 判定依赖逆地理编码的省级字段，取不到省级字段时同样跳过——
+     * 这种条目既无法确认归属，名称也无法与同名候选区分。
+     */
+    private suspend fun districtsToPlaces(districts: List<AmapDistrict>): List<Place> =
+        districts
+            .filter { isWeatherAdminLevel(it.level) }
+            .distinctBy { it.adcode ?: it.name }
+            .sortedBy { districtLevelOf(it.level).ordinal }
+            .mapNotNull { district ->
+                val center = district.center?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                delay(SEARCH_GAP_MS)
+                val component = try {
+                    val response = amapReverseGeocodeService.reverseGeocode(center)
+                    if (response.status == "1") response.regeocode?.addressComponent else null
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+                if (!isMainlandProvince(component?.text(component.province))) return@mapNotNull null
+                districtToPlace(
+                    district = district,
+                    province = component?.text(component.province),
+                    city = component?.text(component.city),
+                    county = component?.text(component.district)
+                )
+            }
 
     // Google 关键字搜索（海外与港澳台主路径，国内仅作无结果兜底）
     private suspend fun searchPlacesByGoogle(query: String): List<Place> {
