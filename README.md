@@ -1,8 +1,8 @@
 # MyWeather — 彩云天气客户端
 
-一款基于 **彩云天气 API** 和 **高德地图 POI 搜索** 的 Android 天气应用，采用 Kotlin + View + DataBinding 构建，支持多城市管理、逐小时/逐日预报图表展示、左右滑动切换城市，以及深色模式。
+一款基于 **彩云天气 API** 和 **高德地图 POI 搜索** 的 Android 天气应用，采用 Kotlin + View + ViewBinding 构建，支持多城市管理、逐小时/逐日预报图表展示、左右滑动切换城市，以及深色模式。
 
-> 本项目为 `main` 分支，采用传统 View 体系实现 UI。`compose` 分支使用 Jetpack Compose 重写了 UI 层。两个分支的 `logic` 层大部分共享（model / dao / service 接口一致），搜索链路与数据仓库各自实现。
+> 本项目为 `main` 分支，采用传统 View 体系实现 UI。`compose` 分支使用 Jetpack Compose 重写了 UI 层。两个分支的 `logic` 层大部分共享（model / dao / service 接口基本一致），搜索链路与数据仓库各自实现。
 
 ## 功能特性
 
@@ -23,7 +23,7 @@
 
 ## 技术栈
 
-- **UI 框架**: View + DataBinding + ViewPager2
+- **UI 框架**: View + ViewBinding + ViewPager2
 - **架构**: MVVM（ViewModel + LiveData + Repository）
 - **网络**: Retrofit 3.0 + Gson
 - **异步**: Kotlin Coroutines
@@ -53,12 +53,12 @@ app/src/main/java/com/myweather/android/
 │   └── network/
 │       ├── MyWeatherNetWork.kt        # 网络访问统一入口
 │       └── service/
-│           ├── amap/                  # 高德地图 POI 搜索服务
+│           ├── amap/                  # 高德文本搜索 / 逆地理编码 / 行政区划服务
 │           ├── caiyun/                # 彩云天气 API 服务
 │           └── google/                # Google Geocode 服务
 └── ui/
     ├── place/
-    │   ├── PlaceFragment.kt           # 城市搜索页
+    │   ├── placeFragment.kt           # 城市搜索页
     │   ├── PlaceViewModel.kt          # 城市搜索 ViewModel
     │   ├── PlaceAdapter.kt            # 搜索结果适配器
     │   └── SavedPlaceAdapter.kt       # 已保存城市适配器
@@ -111,7 +111,7 @@ companion object {
 | API | 用途 | 申请地址 |
 |-----|------|---------|
 | 彩云天气 | 实时/7日/24小时天气数据 | https://www.caiyunapp.com/ |
-| 高德地图 | 国内逆地理编码 | https://lbs.amap.com/ |
+| 高德地图 | 国内城市搜索与逆地理编码 | https://lbs.amap.com/ |
 | Google Geocoding | 海外及港澳台逆地理编码（可选） | Google Cloud Console |
 
 > 国内定位优先使用高德 API，海外及港澳台地区需额外配置 Google API Key。
