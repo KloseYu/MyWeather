@@ -1,8 +1,8 @@
 # MyWeather — 彩云天气客户端
 
-一款基于 **彩云天气 API** 的 Android 天气应用，使用 **Kotlin + Jetpack Compose** 构建，支持全球城市搜索、实时定位、逐时/逐日预报、生活指数展示，以及深色模式。
+一款基于 **彩云天气 API** 和 **高德地图 POI 搜索** 的 Android 天气应用，使用 **Kotlin + Jetpack Compose** 构建，支持全球城市搜索、实时定位、逐时/逐日预报、生活指数展示，以及深色模式。
 
-> 本项目为 `compose` 分支，采用 Jetpack Compose 完全重写 UI 层，替代了 `main` 分支中基于 View + ViewPager2 的传统实现。两个分支的 `logic` 层大部分共享（model / dao / service 接口一致），搜索链路与数据仓库各自实现，UI 层实现不同。
+> 本项目为 `compose` 分支，采用 Jetpack Compose 完全重写 UI 层，替代了 `main` 分支中基于 View + ViewPager2 的传统实现。两个分支的 `logic` 层大部分共享（model / dao / service 接口基本一致），搜索链路与数据仓库各自实现，UI 层实现不同。
 
 ## 功能特性
 
@@ -95,7 +95,7 @@ app/src/main/java/com/myweather/android/
 
 | 方面 | main 分支 | compose 分支 |
 |------|-----------|-------------|
-| UI 框架 | View + DataBinding + ViewPager2 | Jetpack Compose + Material3 |
+| UI 框架 | View + ViewBinding + ViewPager2 | Jetpack Compose + Material3 |
 | Activity | AppCompatActivity + Fragment | ComponentActivity + setContent |
 | 导航 | DrawerLayout + Fragment 切换 | ModalNavigationDrawer |
 | 城市列表 | RecyclerView + Adapter | LazyColumn |
@@ -155,7 +155,7 @@ companion object {
 | API | 用途 | 申请地址 |
 |-----|------|---------|
 | 彩云天气 | 实时/7日/24小时天气数据 | https://www.caiyunapp.com/ |
-| 高德地图 | 国内逆地理编码 | https://lbs.amap.com/ |
+| 高德地图 | 国内城市搜索与逆地理编码 | https://lbs.amap.com/ |
 | Google Geocoding | 海外及港澳台逆地理编码（可选） | Google Cloud Console |
 
 > 国内定位优先使用高德 API，海外及港澳台地区需额外配置 Google API Key。
