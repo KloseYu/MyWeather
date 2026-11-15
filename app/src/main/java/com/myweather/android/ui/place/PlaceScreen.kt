@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +19,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +43,7 @@ import com.myweather.android.logic.model.Place
 import com.myweather.android.ui.place.components.PlaceItem
 import com.myweather.android.ui.place.components.SavedPlaceItem
 import com.myweather.android.ui.theme.LocateIcon
+import com.myweather.android.ui.theme.PlacePalette
 import com.myweather.android.ui.theme.placePalette
 
 /**
@@ -50,11 +53,13 @@ import com.myweather.android.ui.theme.placePalette
  * 只消费 [PlaceUiState]，不直接持有 ViewModel：
  * 搜索词、搜索结果、已保存城市都来自状态流，用户操作通过回调交回上层。
  *
- * 布局结构：
- * - 顶部搜索栏：包含城市名输入框和定位按钮；
- * - 已保存城市列表：显示所有已收藏城市，当前城市名前带 ● 标记，每项右侧有删除按钮；
- * - 搜索结果列表：输入搜索词后实时展示匹配城市。
+ * 布局结构（借助 [Scaffold] 的槽位划分，对应 fragment_place.xml 的三段）：
+ * - topBar 槽位：顶部搜索栏，包含城市名输入框和定位按钮；
+ * - content 区：已保存城市列表（显示所有已收藏城市，当前城市名前带 ● 标记，每项右侧有删除按钮）
+ *   与搜索结果列表（输入搜索词后实时展示匹配城市），共用一张全幅背景图。
  *
+ * 脚手架不接管 inset 与底色：侧边栏的状态栏留白已由 ModalDrawerSheet 默认 windowInsets 消化，
+ * 这里再补一次就是双倍留白；底色透明则让 bg_place 背景图完整铺满。
  * 配色来自 [placePalette]，随系统深色模式自动切换。
  *
  * @param uiState 侧边栏界面状态
@@ -104,104 +109,134 @@ fun PlaceScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .background(palette.actionBar)
-                    .padding(start = 10.dp, end = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BasicTextField(
-                    value = uiState.searchQuery,
-                    onValueChange = onSearchQueryChange,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(40.dp)
-                        .focusRequester(searchFocusRequester)
-                        .padding(start = 0.dp, end = 6.dp),
-                    singleLine = true,
-                    textStyle = TextStyle(color = palette.searchText, fontSize = 14.sp),
-                    cursorBrush = SolidColor(palette.searchText),
-                    decorationBox = { innerTextField ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(palette.searchBg)
-                                .padding(horizontal = 10.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            if (uiState.searchQuery.isEmpty()) {
-                                Text("搜索城市", color = palette.searchHint, fontSize = 14.sp)
-                            }
-                            innerTextField()
-                        }
-                    }
-                )
-                IconButton(
-                    onClick = onLocateClick,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = LocateIcon,
-                        contentDescription = "定位",
-                        tint = Color.Unspecified,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .padding(8.dp)
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            PlaceSearchBar(
+                query = uiState.searchQuery,
+                onQueryChange = onSearchQueryChange,
+                onLocateClick = onLocateClick,
+                palette = palette,
+                focusRequester = searchFocusRequester
+            )
+        },
+        contentWindowInsets = WindowInsets(0),
+        containerColor = Color.Transparent
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.bg_place),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillBounds
+            )
+
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (uiState.savedPlaces.isNotEmpty()) {
+                    Text(
+                        text = "已保存城市",
+                        fontSize = 13.sp,
+                        color = palette.savedLabel,
+                        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
                     )
-                }
-            }
 
-            Box(modifier = Modifier.weight(1f)) {
-                Image(
-                    painter = painterResource(id = R.drawable.bg_place),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.FillBounds
-                )
-
-                Column(modifier = Modifier.fillMaxSize()) {
-                    if (uiState.savedPlaces.isNotEmpty()) {
-                        Text(
-                            text = "已保存城市",
-                            fontSize = 13.sp,
-                            color = palette.savedLabel,
-                            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
-                        )
-
-                        LazyColumn(modifier = Modifier.weight(1f)) {
-                            items(uiState.savedPlaces) { place ->
-                                SavedPlaceItem(
-                                    place = place,
-                                    isCurrent = place.location.lng == currentLng &&
-                                        place.location.lat == currentLat,
-                                    palette = palette,
-                                    onClick = { onPlaceClick(place) },
-                                    onDelete = { onDeletePlace(place) }
-                                )
-                            }
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(uiState.savedPlaces) { place ->
+                            SavedPlaceItem(
+                                place = place,
+                                isCurrent = place.location.lng == currentLng &&
+                                    place.location.lat == currentLat,
+                                palette = palette,
+                                onClick = { onPlaceClick(place) },
+                                onDelete = { onDeletePlace(place) }
+                            )
                         }
                     }
+                }
 
-                    if (uiState.searchQuery.isNotEmpty() && uiState.searchResults.isNotEmpty()) {
-                        HorizontalDivider(color = palette.divider, thickness = 1.dp)
+                if (uiState.searchQuery.isNotEmpty() && uiState.searchResults.isNotEmpty()) {
+                    HorizontalDivider(color = palette.divider, thickness = 1.dp)
 
-                        LazyColumn(modifier = Modifier.weight(1f)) {
-                            items(uiState.searchResults) { place ->
-                                PlaceItem(
-                                    place = place,
-                                    palette = palette,
-                                    onClick = { onPlaceClick(place) }
-                                )
-                            }
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(uiState.searchResults) { place ->
+                            PlaceItem(
+                                place = place,
+                                palette = palette,
+                                onClick = { onPlaceClick(place) }
+                            )
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * 侧边栏顶部搜索栏，对应 fragment_place.xml 里的 actionBarLayout。
+ *
+ * 单独抽出来是为了直接放进 [Scaffold] 的 topBar 槽位：
+ * 槽位只负责定位与高度，栏内的输入框、定位按钮仍按原样式绘制。
+ */
+@Composable
+private fun PlaceSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onLocateClick: () -> Unit,
+    palette: PlacePalette,
+    focusRequester: FocusRequester
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(60.dp)
+            .background(palette.actionBar)
+            .padding(start = 10.dp, end = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BasicTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier
+                .weight(1f)
+                .height(40.dp)
+                .focusRequester(focusRequester)
+                .padding(start = 0.dp, end = 6.dp),
+            singleLine = true,
+            textStyle = TextStyle(color = palette.searchText, fontSize = 14.sp),
+            cursorBrush = SolidColor(palette.searchText),
+            decorationBox = { innerTextField ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(palette.searchBg)
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    if (query.isEmpty()) {
+                        Text("搜索城市", color = palette.searchHint, fontSize = 14.sp)
+                    }
+                    innerTextField()
+                }
+            }
+        )
+        IconButton(
+            onClick = onLocateClick,
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(
+                imageVector = LocateIcon,
+                contentDescription = "定位",
+                tint = Color.Unspecified,
+                modifier = Modifier
+                    .size(24.dp)
+                    .padding(8.dp)
+            )
         }
     }
 }

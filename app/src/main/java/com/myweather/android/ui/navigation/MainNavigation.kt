@@ -2,16 +2,21 @@ package com.myweather.android.ui.navigation
 
 import android.Manifest
 import android.view.inputmethod.InputMethodManager
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -45,8 +50,14 @@ import kotlinx.coroutines.launch
  * - 主内容区承载 [WeatherScreen] 天气详情界面。
  *
  * 这里只做三件事：把两个 ViewModel 的状态收集成 Compose 状态、把用户操作转成 ViewModel 调用、
- * 处理需要 Activity 能力（权限申请、Toast、键盘）的副作用。
+ * 处理需要 Activity 能力（权限申请、提示、键盘）的副作用。
  * 具体界面渲染分别在 [PlaceScreen] 与 [WeatherScreen] 中完成。
+ *
+ * 提示信息统一走 [Scaffold] 的 snackbarHost 槽位（替代原来的 Toast）：
+ * 前者由协程驱动、可被无障碍服务朗读，且不依赖 Activity 上下文。
+ * 脚手架本身只提供这一层承载，不做任何系统栏 inset 与底色处理
+ * （[contentWindowInsets] 置零、[containerColor] 透明），
+ * 因此侧边栏与天气页仍保持原先的边到边全幅效果。
  *
  * 状态管理：
  * - 已保存城市列表由 [PlaceViewModel.uiState] 单向驱动，保存/删除后 UI 自动重组；
@@ -64,6 +75,13 @@ fun MainNavigation(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // 统一入口：把需要提示的信息交给 Scaffold 的 snackbarHost，
+    // 复用同一个 hostState，消息按顺序排队而不是互相覆盖
+    fun showMessage(message: String) {
+        scope.launch { snackbarHostState.showSnackbar(message) }
+    }
 
     val placeState by placeViewModel.uiState.collectAsStateWithLifecycle()
     val weatherState by weatherViewModel.uiState.collectAsStateWithLifecycle()
@@ -95,7 +113,7 @@ fun MainNavigation(
 
     LaunchedEffect(weatherState.errorMessage) {
         weatherState.errorMessage?.let {
-            Toast.makeText(context, "无法成功获取天气信息", Toast.LENGTH_SHORT).show()
+            showMessage("无法成功获取天气信息")
             weatherViewModel.onErrorShown()
         }
     }
@@ -109,7 +127,7 @@ fun MainNavigation(
 
     LaunchedEffect(locateError) {
         locateError?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            showMessage(it)
             placeViewModel.onLocateErrorShown()
         }
     }
@@ -122,7 +140,7 @@ fun MainNavigation(
         if (granted) {
             placeViewModel.locate()
         } else {
-            Toast.makeText(context, "定位权限未开启，请手动搜索城市", Toast.LENGTH_SHORT).show()
+            showMessage("定位权限未开启，请手动搜索城市")
         }
     }
 
@@ -150,64 +168,82 @@ fun MainNavigation(
         }
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                modifier = Modifier.width(320.dp),
-                drawerContainerColor = if (isSystemInDarkTheme()) DrawerBgDark else DrawerBgLight
-            ) {
-                PlaceScreen(
-                    uiState = placeState,
-                    currentLng = currentPlace?.location?.lng ?: "",
-                    currentLat = currentPlace?.location?.lat ?: "",
-                    onSearchQueryChange = placeViewModel::onSearchQueryChange,
-                    onLocateClick = { requestLocate() },
-                    onPlaceClick = { place ->
-                        placeViewModel.savePlace(place)
-                        selectedKey = place.placeKey
-                        scope.launch { drawerState.close() }
-                    },
-                    onDeletePlace = placeViewModel::deletePlace,
-                    onSearchErrorShown = placeViewModel::onErrorShown,
-                    onDrawerOpened = placeViewModel::refreshSavedPlaces,
-                    isDrawerOpen = drawerState.isOpen,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        },
-        modifier = modifier
-    ) {
-        if (currentPlace != null) {
-            WeatherScreen(
-                uiState = weatherState,
-                onNavClick = { requestLocate() },
-                onAddClick = { scope.launch { drawerState.open() } },
-                onSwipeLeft = {
-                    val index = placeState.savedPlaces.indexOfFirst { it.placeKey == currentPlace.placeKey }
-                    if (index >= 0 && index < placeState.savedPlaces.size - 1) {
-                        selectedKey = placeState.savedPlaces[index + 1].placeKey
-                    }
-                },
-                onSwipeRight = {
-                    val index = placeState.savedPlaces.indexOfFirst { it.placeKey == currentPlace.placeKey }
-                    if (index > 0) {
-                        selectedKey = placeState.savedPlaces[index - 1].placeKey
-                    }
-                },
-                onRefresh = weatherViewModel::refresh
+    // 脚手架只承担 snackbarHost 这一层，不接管 inset 与底色，
+    // 否则天气背景图与侧边栏底色会被 surface 盖掉、边到边也会被系统栏 padding 挤回去
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        // inset 置零后 Scaffold 不再给 snackbar 让位，单独补导航栏留白，
+        // 否则提示会被手势导航条压住
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.navigationBarsPadding()
             )
-        } else {
-            LaunchedEffect(Unit) {
-                if (placeState.savedPlaces.isEmpty()) {
-                    drawerState.open()
+        },
+        contentWindowInsets = WindowInsets(0),
+        containerColor = Color.Transparent
+    ) { innerPadding ->
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet(
+                    modifier = Modifier.width(320.dp),
+                    drawerContainerColor = if (isSystemInDarkTheme()) DrawerBgDark else DrawerBgLight
+                ) {
+                    PlaceScreen(
+                        uiState = placeState,
+                        currentLng = currentPlace?.location?.lng ?: "",
+                        currentLat = currentPlace?.location?.lat ?: "",
+                        onSearchQueryChange = placeViewModel::onSearchQueryChange,
+                        onLocateClick = { requestLocate() },
+                        onPlaceClick = { place ->
+                            placeViewModel.savePlace(place)
+                            selectedKey = place.placeKey
+                            scope.launch { drawerState.close() }
+                        },
+                        onDeletePlace = placeViewModel::deletePlace,
+                        onSearchErrorShown = placeViewModel::onErrorShown,
+                        onDrawerOpened = placeViewModel::refreshSavedPlaces,
+                        isDrawerOpen = drawerState.isOpen,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
-            }
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("请搜索并选择城市", color = Color.Gray)
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            if (currentPlace != null) {
+                WeatherScreen(
+                    uiState = weatherState,
+                    onNavClick = { requestLocate() },
+                    onAddClick = { scope.launch { drawerState.open() } },
+                    onSwipeLeft = {
+                        val index = placeState.savedPlaces.indexOfFirst { it.placeKey == currentPlace.placeKey }
+                        if (index >= 0 && index < placeState.savedPlaces.size - 1) {
+                            selectedKey = placeState.savedPlaces[index + 1].placeKey
+                        }
+                    },
+                    onSwipeRight = {
+                        val index = placeState.savedPlaces.indexOfFirst { it.placeKey == currentPlace.placeKey }
+                        if (index > 0) {
+                            selectedKey = placeState.savedPlaces[index - 1].placeKey
+                        }
+                    },
+                    onRefresh = weatherViewModel::refresh
+                )
+            } else {
+                LaunchedEffect(Unit) {
+                    if (placeState.savedPlaces.isEmpty()) {
+                        drawerState.open()
+                    }
+                }
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("请搜索并选择城市", color = Color.Gray)
+                }
             }
         }
     }

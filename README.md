@@ -98,6 +98,8 @@ app/src/main/java/com/myweather/android/
 | UI 框架 | View + ViewBinding + ViewPager2 | Jetpack Compose + Material3 |
 | Activity | AppCompatActivity + Fragment | ComponentActivity + setContent |
 | 导航 | DrawerLayout + Fragment 切换 | ModalNavigationDrawer |
+| 页面骨架 | 布局 XML + `fitsSystemWindows` | 仅侧边栏与外壳套 `Scaffold`（`snackbarHost` / `topBar` 槽位），天气页保持无脚手架 |
+| 错误提示 | Toast | Scaffold `snackbarHost`（侧边栏搜索失败仍用 Toast） |
 | 城市列表 | RecyclerView + Adapter | LazyColumn |
 | 图表 | 自定义 View（DailyChartView 等） | Canvas Composable |
 | 刷新 | SwipeRefreshLayout | PullToRefreshBox |
