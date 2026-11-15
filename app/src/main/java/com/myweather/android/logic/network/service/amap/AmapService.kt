@@ -1,6 +1,6 @@
 package com.myweather.android.logic.network.service.amap
 
-import com.myweather.android.MyWeatherApplication
+import com.myweather.android.BuildConfig
 import com.myweather.android.logic.model.Location
 import com.myweather.android.logic.model.Place
 import com.google.gson.JsonElement
@@ -11,7 +11,7 @@ import retrofit2.http.Query
 // 高德文本搜索接口：城市关键词搜索
 interface AmapTextSearchService {
 
-    @GET("v5/place/text?key=${MyWeatherApplication.AMAP_KEY}")
+    @GET("v5/place/text?key=${BuildConfig.AMAP_KEY}")
     suspend fun searchCities(
         @Query("keywords") keywords: String,
         @Query("types") types: String,
@@ -24,7 +24,7 @@ interface AmapTextSearchService {
 // 高德逆地理编码接口：经纬度 → 地址
 interface AmapReverseGeocodeService {
 
-    @GET("v3/geocode/regeo?key=${MyWeatherApplication.AMAP_KEY}")
+    @GET("v3/geocode/regeo?key=${BuildConfig.AMAP_KEY}")
     suspend fun reverseGeocode(
         @Query("location") location: String
     ): AmapResponse
@@ -33,7 +33,7 @@ interface AmapReverseGeocodeService {
 // 高德行政区划接口：按关键词一次取回全国所有同名行政区
 interface AmapDistrictService {
 
-    @GET("v3/config/district?key=${MyWeatherApplication.AMAP_KEY}")
+    @GET("v3/config/district?key=${BuildConfig.AMAP_KEY}")
     suspend fun searchDistricts(
         @Query("keywords") keywords: String,
         @Query("subdistrict") subdistrict: Int,

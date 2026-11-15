@@ -132,25 +132,30 @@ compose 分支的 `LifeIndexSection` 严格保持与传统版本 `life_index.xml
 
 ## API Key 配置
 
-项目不内置任何 API Key，所有 Key 均以占位符形式存在，需自行申请并填入 `MyWeatherApplication.kt`：
+项目不内置任何 API Key。Key 通过 `local.properties` 注入 `BuildConfig`，源码中只有空串兜底，
+因此仓库内容和推送记录里都不会出现真实 Key。
 
-```kotlin
-companion object {
-    const val CaiYun_Key = "YOUR_CAIYUN_KEY"    // 彩云天气
-    const val AMAP_KEY   = "YOUR_AMAP_KEY"      // 高德地图
-    const val GOOGLE_KEY = " "                   // Google Geocoding（可选）
-}
+1. 在项目根目录的 `local.properties`（已被 `.gitignore` 忽略）中追加：
+
+```properties
+caiyun.key=你的彩云天气 Key
+amap.key=你的高德 Key
+google.key=你的 Google Geocoding Key（可选，留空则跳过）
 ```
 
-同时需要将对应 Key 填入以下位置（保持一致）：
+2. `app/build.gradle.kts` 会读取这三项并写入 `buildConfigField`，同步 Gradle 后即可使用，无需改动源码。
+
+代码中的引用方式：
 
 | 文件 | 引用方式 |
 |------|---------|
-| `WeatherService.kt` | `@GET("v2.6/${MyWeatherApplication.CaiYun_Key}/...")` |
-| `AmapService.kt` | `@GET("v5/place/text?key=${MyWeatherApplication.AMAP_KEY}")` |
-| `AmapService.kt` | `@GET("v3/geocode/regeo?key=${MyWeatherApplication.AMAP_KEY}")` |
-| `AmapService.kt` | `@GET("v3/config/district?key=${MyWeatherApplication.AMAP_KEY}")` |
-| `GoogleService.kt` | `@Query("key") key: String`，由调用方传入 `GOOGLE_KEY` |
+| `WeatherService.kt` | `@GET("v2.6/${BuildConfig.CAIYUN_KEY}/...")` |
+| `AmapService.kt` | `@GET("v5/place/text?key=${BuildConfig.AMAP_KEY}")` |
+| `AmapService.kt` | `@GET("v3/geocode/regeo?key=${BuildConfig.AMAP_KEY}")` |
+| `AmapService.kt` | `@GET("v3/config/district?key=${BuildConfig.AMAP_KEY}")` |
+| `GoogleService.kt` | `@Query("key") key: String`，由调用方传入 `BuildConfig.GOOGLE_KEY` |
+
+> 未配置 Key 时项目仍可正常编译，但运行时天气与城市搜索请求会失败。
 
 ### 申请地址
 

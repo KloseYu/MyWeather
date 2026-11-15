@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -6,6 +8,18 @@ plugins {
 kotlin {
     jvmToolchain(21)
 }
+
+// API Key 从 local.properties 读取后注入 BuildConfig。
+// local.properties 已被 .gitignore 忽略，因此 Key 只存在于本地，源码里只有空串兜底，
+// 云端仓库无论怎么推送都不会带上 Key。
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun apiKey(name: String): String = localProperties.getProperty(name)?.trim().orEmpty()
 
 android {
     namespace = "com.myweather.android"
@@ -19,6 +33,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "CAIYUN_KEY", "\"${apiKey("caiyun.key")}\"")
+        buildConfigField("String", "AMAP_KEY", "\"${apiKey("amap.key")}\"")
+        buildConfigField("String", "GOOGLE_KEY", "\"${apiKey("google.key")}\"")
     }
 
     buildTypes {
@@ -33,6 +51,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

@@ -5,20 +5,17 @@ import android.app.Application
 import android.content.Context
 
 /**
- * 全局 Application，持有全局 Context 和 API 密钥常量。
+ * 全局 Application，持有全局 Context。
  * 在 AndroidManifest.xml 中通过 android:name 注册。
  *
- * API Key 配置说明：
- * - [CaiYun_Key]：彩云天气 API Key，需在 https://www.caiyunapp.com 申请
- * - [AMAP_KEY]：高德逆地理编码 Key，需在 https://lbs.amap.com/ 申请
- * - [GOOGLE_KEY]：Google Geocoding API Key，需在 Google Cloud Console 申请
+ * API Key 不再硬编码在源码里，改为由 app/build.gradle.kts 从 local.properties
+ * 读取后注入 [BuildConfig]，对应字段为 [BuildConfig.CAIYUN_KEY]、
+ * [BuildConfig.AMAP_KEY]、[BuildConfig.GOOGLE_KEY]。
+ * local.properties 已被 .gitignore 忽略，Key 只留在本地，不会进入版本库。
+ * 申请地址见 README。
  */
 class MyWeatherApplication : Application() {
     companion object {
-        const val CaiYun_Key = "YOUR_CAIYUN_KEY"
-        const val AMAP_KEY = "YOUR_AMAP_KEY"
-        const val GOOGLE_KEY = " " //如需使用google位置服务，需在google console中创建项目并获取api key
-
         @SuppressLint("staticFieldLeak")
         lateinit var context: Context
     }

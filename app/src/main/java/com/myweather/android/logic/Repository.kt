@@ -1,6 +1,6 @@
 package com.myweather.android.logic
 
-import com.myweather.android.MyWeatherApplication
+import com.myweather.android.BuildConfig
 import com.myweather.android.logic.dao.PlaceDao
 import com.myweather.android.logic.model.Place
 import com.myweather.android.logic.model.Weather
@@ -53,7 +53,7 @@ object Repository {
 
     // 逆地理编码失败提示：区分「未配置 Google Key」与「已配置但仍失败」
     private fun geocodeFailureMessage(): String {
-        return if (MyWeatherApplication.GOOGLE_KEY.isNotBlank()) {
+        return if (BuildConfig.GOOGLE_KEY.isNotBlank()) {
             "定位失败，请检查网络后重试"
         } else {
             "海外及港澳台地区需配置 Google API Key"

@@ -1,6 +1,6 @@
 package com.myweather.android.logic.network
 
-import com.myweather.android.MyWeatherApplication
+import com.myweather.android.BuildConfig
 import com.myweather.android.logic.model.*
 import com.myweather.android.logic.network.service.amap.AmapDistrict
 import com.myweather.android.logic.network.service.amap.AmapPOI
@@ -62,7 +62,7 @@ object MyWeatherNetWork {
     private val weatherService = CaiYunServiceCreator.create<WeatherService>()
 
     /** Google Key 是否可用；空白值代表尚未申请，兜底请求直接跳过，避免无效网络调用 */
-    private fun isGoogleKeyAvailable(): Boolean = MyWeatherApplication.GOOGLE_KEY.isNotBlank()
+    private fun isGoogleKeyAvailable(): Boolean = BuildConfig.GOOGLE_KEY.isNotBlank()
 
     /**
      * 城市搜索：只返回能查天气的行政区，港澳台与海外交给 Google。
@@ -311,7 +311,7 @@ object MyWeatherNetWork {
         if (!isGoogleKeyAvailable()) return emptyList()
         return try {
             val response = withContext(Dispatchers.IO) {
-                googleService.geocode(query, GOOGLE_LANGUAGE, MyWeatherApplication.GOOGLE_KEY).execute()
+                googleService.geocode(query, GOOGLE_LANGUAGE, BuildConfig.GOOGLE_KEY).execute()
             }
             val results = response.body()?.results
             if (response.isSuccessful && !results.isNullOrEmpty()) {
@@ -360,7 +360,7 @@ object MyWeatherNetWork {
         if (!isGoogleKeyAvailable()) return null
         return try {
             val response = withContext(Dispatchers.IO) {
-                googleService.reverseGeocode("${lat},${lng}", GOOGLE_LANGUAGE, MyWeatherApplication.GOOGLE_KEY).execute()
+                googleService.reverseGeocode("${lat},${lng}", GOOGLE_LANGUAGE, BuildConfig.GOOGLE_KEY).execute()
             }
             val result = response.body()?.results?.firstOrNull()
             if (response.isSuccessful && result != null) {
