@@ -2,7 +2,7 @@
 
 一款基于 **彩云天气 API** 和 **高德地图 POI 搜索** 的 Android 天气应用，采用 Kotlin + View + ViewBinding 构建，支持多城市管理、逐小时/逐日预报图表展示、左右滑动切换城市，以及深色模式。
 
-> 本项目为 `main` 分支，采用传统 View 体系实现 UI。`compose` 分支使用 Jetpack Compose 重写了 UI 层。两个分支的 `logic` 层大部分共享（model / dao / service 接口基本一致），搜索链路与数据仓库各自实现。
+> 本项目为 `main` 分支，采用传统 View 体系实现 UI。`compose` 分支使用 Jetpack Compose 重写了 UI 层，**页面骨架改为 Material3 `Scaffold` 槽位**（外壳取 `snackbarHost`、侧边栏取 `topBar`，天气页为保持全幅背景刻意不套脚手架）。两个分支的 `logic` 层大部分共享（model / dao / service 接口签名一致，但 Key 注入方式不同），搜索链路与数据仓库各自实现。具体差异见下方[分支对照表](#main-分支与-compose-分支的差异)。
 
 ## 功能特性
 
@@ -74,6 +74,35 @@ app/src/main/java/com/myweather/android/
             └── DailyChartView.kt      # 7日图表（柱形+水波纹）
 ```
 
+## main 分支与 compose 分支的差异
+
+| 方面 | main 分支 | compose 分支 |
+|------|-----------|-------------|
+| UI 框架 | View + ViewBinding + ViewPager2 | Jetpack Compose + Material3 |
+| Activity | AppCompatActivity + Fragment | ComponentActivity + setContent |
+| 导航 | DrawerLayout + Fragment 切换 | ModalNavigationDrawer |
+| 页面骨架 | 布局 XML + `fitsSystemWindows` | 仅侧边栏与外壳套 `Scaffold`（`snackbarHost` / `topBar` 槽位），天气页保持无脚手架 |
+| 错误提示 | Toast | Scaffold `snackbarHost`（侧边栏搜索失败仍用 Toast） |
+| 城市列表 | RecyclerView + Adapter | LazyColumn |
+| 图表 | 自定义 View（DailyChartView 等） | Canvas Composable |
+| 刷新 | SwipeRefreshLayout | PullToRefreshBox |
+| 主题 | XML styles/themes | Compose Theme + ColorScheme |
+| 边到边 | `enableEdgeToEdge()` + XML `fitsSystemWindows` | `enableEdgeToEdge()` + Compose inset API（`statusBarsPadding()` / `Scaffold` 槽位） |
+| 生活指数 | `life_index.xml` 硬编码标签 | `LifeIndexSection` Composable，文字与 XML 完全同步 |
+| API Key 注入 | `MyWeatherApplication.kt` 的 `const val` 常量 | `local.properties` → `buildConfigField` → `BuildConfig` |
+
+### Scaffold 槽位说明（compose 分支）
+
+compose 分支只在外壳与侧边栏两处套用 `Scaffold`，天气页刻意保持无脚手架：
+
+| 位置 | 使用的槽位 | 说明 |
+|------|-----------|------|
+| 外壳 `MainNavigation` | `snackbarHost` | 承接原 Toast 提示；`contentWindowInsets = WindowInsets(0)` + 透明底色，不干扰抽屉与全幅背景 |
+| 侧边栏 `PlaceScreen` | `topBar` | 原 60dp 搜索栏 Row 移入槽位，下方列表消费 `innerPadding` |
+| 天气页 `WeatherScreen` | 不使用 | 背景图需从状态栏下沿铺满，`Scaffold` 的默认 `contentWindowInsets` 与 `containerColor` 会破坏 edge-to-edge |
+
+> 因此「页面骨架」不能按传统版的 XML 结构来理解 compose 分支：`Scaffold` 在这里只作为**槽位容器**使用，不做 inset 与底色的接管。
+
 ## 构建与运行
 
 1. 克隆仓库：
@@ -87,6 +116,8 @@ app/src/main/java/com/myweather/android/
 ## API Key 配置
 
 项目不内置任何 API Key，所有 Key 均以占位符形式存在，需自行申请并填入 `MyWeatherApplication.kt`：
+
+> `compose` 分支的 Key 注入方式与本分支不同：改为从 `local.properties`（已被 `.gitignore` 忽略）读取并注入 `BuildConfig`，源码中不含 Key。切换分支时请注意区别，详见上方[分支对照表](#main-分支与-compose-分支的差异)。
 
 ```kotlin
 companion object {
