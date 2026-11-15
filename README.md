@@ -2,7 +2,7 @@
 
 一款基于 **彩云天气 API** 和 **高德地图 POI 搜索** 的 Android 天气应用，使用 **Kotlin + Jetpack Compose** 构建，支持全球城市搜索、实时定位、逐时/逐日预报、生活指数展示，以及深色模式。
 
-> 本项目为 `compose` 分支，采用 Jetpack Compose 完全重写 UI 层，替代了 `main` 分支中基于 View + ViewPager2 的传统实现。两个分支的 `logic` 层大部分共享（model / dao / service 接口基本一致），搜索链路与数据仓库各自实现，UI 层实现不同。
+> 本项目为 `compose` 分支，采用 Jetpack Compose 完全重写 UI 层，替代了 `main` 分支中基于 View + ViewPager2 的传统实现。**页面骨架改为 Material3 `Scaffold` 槽位**（外壳取 `snackbarHost`、侧边栏取 `topBar`，天气页为保持全幅背景刻意不套脚手架）。两个分支的 `logic` 层大部分共享（model / dao / service 接口签名一致，但 Key 注入方式不同），搜索链路与数据仓库各自实现，UI 层实现不同。具体差异见下方[分支对照表](#compose-分支与-main-分支的差异)。
 
 ## 功能特性
 
@@ -104,8 +104,21 @@ app/src/main/java/com/myweather/android/
 | 图表 | 自定义 View（DailyChartView 等） | Canvas Composable |
 | 刷新 | SwipeRefreshLayout | PullToRefreshBox |
 | 主题 | XML styles/themes | Compose Theme + ColorScheme |
-| 边到边 | 手动配置 | enableEdgeToEdge() |
-| 生活指数 | life_index.xml 硬编码标签 | LifeIndexSection Composable，文字与 XML 完全同步 |
+| 边到边 | `enableEdgeToEdge()` + XML `fitsSystemWindows` | `enableEdgeToEdge()` + Compose inset API（`statusBarsPadding()` / `Scaffold` 槽位） |
+| 生活指数 | `life_index.xml` 硬编码标签 | `LifeIndexSection` Composable，文字与 XML 完全同步 |
+| API Key 注入 | `MyWeatherApplication.kt` 的 `const val` 常量 | `local.properties` → `buildConfigField` → `BuildConfig` |
+
+### Scaffold 槽位说明
+
+本分支只在外壳与侧边栏两处套用 `Scaffold`，天气页刻意保持无脚手架：
+
+| 位置 | 使用的槽位 | 说明 |
+|------|-----------|------|
+| 外壳 `MainNavigation` | `snackbarHost` | 承接原 Toast 提示；`contentWindowInsets = WindowInsets(0)` + 透明底色，不干扰抽屉与全幅背景；snackbar 单独补 `navigationBarsPadding()` |
+| 侧边栏 `PlaceScreen` | `topBar` | 原 60dp 搜索栏 Row 移入槽位，下方列表消费 `innerPadding` |
+| 天气页 `WeatherScreen` | 不使用 | 背景图需从状态栏下沿铺满，`Scaffold` 的默认 `contentWindowInsets` 与 `containerColor` 会破坏 edge-to-edge；状态栏留白仍由 `NowTopBar` 的 `statusBarsPadding()` 处理 |
+
+> 因此「页面骨架」不能按传统版的 XML 结构来理解本分支：`Scaffold` 在这里只作为**槽位容器**使用，不做 inset 与底色的接管。
 
 ### 生活指数文字同步说明
 
@@ -134,6 +147,8 @@ compose 分支的 `LifeIndexSection` 严格保持与传统版本 `life_index.xml
 
 项目不内置任何 API Key。Key 通过 `local.properties` 注入 `BuildConfig`，源码中只有空串兜底，
 因此仓库内容和推送记录里都不会出现真实 Key。
+
+> `main` 分支的 Key 注入方式与本分支不同：仍为 `MyWeatherApplication.kt` 中的 `const val` 常量占位符，需自行填入源码。切换分支时请注意区别，详见上方[分支对照表](#compose-分支与-main-分支的差异)。
 
 1. 在项目根目录的 `local.properties`（已被 `.gitignore` 忽略）中追加：
 
